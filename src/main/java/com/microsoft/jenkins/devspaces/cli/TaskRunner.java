@@ -14,10 +14,9 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,7 +26,7 @@ public class TaskRunner {
 
     public static final boolean isWindows = Util.isWindows();
     private static final String windowsCommand = "cmd /c %s";
-    private static final String nonWindowsCommand = "bash -c %s";
+    private static final String nonWindowsCommand = "bash %s";
 
     public String workDirectory;
     public RetryContext retryContext;
@@ -47,9 +46,9 @@ public class TaskRunner {
      * @throws IOException
      * @throws InterruptedException
      */
-    public void run(String command) throws IOException, InterruptedException {
+    public TaskResult run(String command) throws IOException, InterruptedException {
         if (StringUtils.isBlank(command)) {
-            return;
+            return new TaskResult(taskName, outputSb.toString(), errorSb.toString(), false);
         }
 
         String wholeCommand = String.format(isWindows ? windowsCommand : nonWindowsCommand, command);
@@ -58,8 +57,8 @@ public class TaskRunner {
         // TODO filter credentials in log
         LOGGER.log(Level.INFO, "Execute command {0} at {1} using {2}", new String[]{taskName, workDirectory, wholeCommand});
 
-        BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        BufferedReader error = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+        BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+        BufferedReader error = new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8));
 
         String line;
         while ((line = in.readLine()) != null) {
@@ -71,12 +70,15 @@ public class TaskRunner {
             this.errorSb.append(Constants.LINE_SEPARATOR);
         }
         int exitCode = process.waitFor();
+        in.close();
+        error.close();
         LOGGER.log(Level.INFO, "Command {0} exits with code {1}", new Object[]{taskName, exitCode});
+        return new TaskResult(taskName, outputSb.toString(), errorSb.toString(), exitCode == 0);
     }
 
-    public void run(String command, String[] inputs) throws IOException, InterruptedException {
+    public TaskResult run(String command, String[] inputs) throws IOException, InterruptedException {
         if (StringUtils.isBlank(command) || inputs == null) {
-            return;
+            return new TaskResult(taskName, outputSb.toString(), errorSb.toString(), false);
         }
         String wholeCommand = String.format(isWindows ? windowsCommand : nonWindowsCommand, command);
         File dir = StringUtils.isBlank(this.workDirectory) ? null : new File(this.workDirectory);
@@ -84,9 +86,9 @@ public class TaskRunner {
         LOGGER.log(Level.INFO, "Execute command {0} at {1} using {2}", new String[]{taskName, workDirectory, wholeCommand});
 
 
-        BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        BufferedReader error = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-        BufferedWriter out = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
+        BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+        BufferedReader error = new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8));
+        BufferedWriter out = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
         String line;
 
         for (String input : inputs) {
@@ -104,7 +106,11 @@ public class TaskRunner {
         }
 
         int exitCode = process.waitFor();
+        in.close();
+        error.close();
+        out.close();
         LOGGER.log(Level.INFO, "Command {0} exits with code {1}", new Object[]{taskName, exitCode});
+        return new TaskResult(taskName, outputSb.toString(), errorSb.toString(), exitCode == 0);
     }
 
     public String getOutput() {
@@ -113,28 +119,5 @@ public class TaskRunner {
 
     public String getError() {
         return this.errorSb.toString();
-    }
-
-    public static void setUpStreamGobbler(final InputStream is, final PrintStream ps) {
-        final InputStreamReader streamReader = new InputStreamReader(is);
-        new Thread(new Runnable() {
-            public void run() {
-                BufferedReader br = new BufferedReader(streamReader);
-                String line = null;
-                try {
-                    while ((line = br.readLine()) != null) {
-                        ps.println("process stream: " + line);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    try {
-                        br.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }).start();
     }
 }

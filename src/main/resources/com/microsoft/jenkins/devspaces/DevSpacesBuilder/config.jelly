@@ -21,4 +21,7 @@
     <f:entry title="${%spaceName_title}" field="spaceName">
         <f:textbox/>
     </f:entry>
+    <f:entry title="${%userCredentials_title}" field="userCredentialsId">
+        <c:select expressionAllowed="false"/>
+    </f:entry>
 </j:jelly>

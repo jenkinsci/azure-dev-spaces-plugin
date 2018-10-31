@@ -23,6 +23,7 @@ public class DevSpacesContext extends BaseCommandContext
     private String spaceName;
     private String aksName;
     private String resourceGroupName;
+    private String userCredentialsId;
 
     protected void configure(Run<?, ?> run,
                              FilePath workspace,
@@ -65,6 +66,11 @@ public class DevSpacesContext extends BaseCommandContext
         return this.resourceGroupName;
     }
 
+    @Override
+    public String getUserCredentialsId() {
+        return this.userCredentialsId;
+    }
+
     public void setRepoPath(String repoPath) {
         this.repoPath = repoPath;
     }
@@ -79,5 +85,9 @@ public class DevSpacesContext extends BaseCommandContext
 
     public void setResourceGroupName(String resourceGroupName) {
         this.resourceGroupName = resourceGroupName;
+    }
+
+    public void setUserCredentialsId(String userCredentialsId) {
+        this.userCredentialsId = userCredentialsId;
     }
 }

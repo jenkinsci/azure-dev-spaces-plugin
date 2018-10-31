@@ -6,4 +6,7 @@
 package com.microsoft.jenkins.devspaces.exceptions;
 
 public class AzureCliException extends Exception {
+    public AzureCliException(Throwable throwable) {
+        super("Execute Azure cli exception", throwable);
+    }
 }

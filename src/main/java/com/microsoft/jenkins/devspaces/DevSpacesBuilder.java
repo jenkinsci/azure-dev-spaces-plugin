@@ -6,6 +6,7 @@
 package com.microsoft.jenkins.devspaces;
 
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.microsoft.azure.PagedList;
 import com.microsoft.azure.management.Azure;
 import com.microsoft.azure.management.compute.ContainerService;
@@ -26,6 +27,7 @@ import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 import jenkins.tasks.SimpleBuildStep;
 import org.apache.commons.lang3.StringUtils;
 import org.jenkinsci.Symbol;
@@ -47,6 +49,8 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
     private String repoPath;
     @DataBoundSetter
     private String spaceName;
+    @DataBoundSetter
+    private String userCredentialsId;
 
     @DataBoundConstructor
     public DevSpacesBuilder(String azureCredentialsId) {
@@ -57,6 +61,7 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
     public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
 
         DevSpacesContext commandContext = new DevSpacesContext();
+
         commandContext.setRepoPath(this.repoPath);
         commandContext.setSpaceName(this.spaceName);
         commandContext.setAksName(this.aksName);
@@ -145,6 +150,12 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
             return model;
         }
 
+        public ListBoxModel doFillUserCredentialsIdItems(@AncestorInPath final Item owner) {
+            StandardListBoxModel model = new StandardListBoxModel();
+            model.add("test", Constants.INVALID_OPTION);
+            model.includeAs(ACL.SYSTEM, owner, StandardUsernamePasswordCredentials.class);
+            return model;
+        }
     }
 
     public String getAzureCredentialsId() {
@@ -165,5 +176,9 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
 
     public String getSpaceName() {
         return spaceName;
+    }
+
+    public String getUserCredentialsId() {
+        return userCredentialsId;
     }
 }

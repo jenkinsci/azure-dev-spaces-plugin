@@ -8,6 +8,7 @@ package com.microsoft.jenkins.devspaces.util;
 import com.microsoft.azure.management.compute.ContainerServiceOrchestratorTypes;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -20,9 +21,9 @@ public class Constants {
     public static final String AKS_PROVIDER = "Microsoft.ContainerService";
     public static final String AKS_RESOURCE_TYPE = "managedClusters";
 
-    public static final Set<ContainerServiceOrchestratorTypes> SUPPORTED_ORCHESTRATOR = new HashSet<>(Arrays.asList(
+    public static final Set<ContainerServiceOrchestratorTypes> SUPPORTED_ORCHESTRATOR = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             ContainerServiceOrchestratorTypes.KUBERNETES,
             ContainerServiceOrchestratorTypes.DCOS,
             ContainerServiceOrchestratorTypes.SWARM
-    ));
+    )));
 }

@@ -5,11 +5,16 @@
 
 package com.microsoft.jenkins.devspaces.commands;
 
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.microsoft.jenkins.azurecommons.command.CommandState;
 import com.microsoft.jenkins.azurecommons.command.IBaseCommandData;
 import com.microsoft.jenkins.azurecommons.command.ICommand;
 import com.microsoft.jenkins.devspaces.cli.AzTask;
 import com.microsoft.jenkins.devspaces.cli.AzdsTask;
+import com.microsoft.jenkins.devspaces.cli.TaskResult;
+import com.microsoft.jenkins.devspaces.exceptions.AzureCliException;
+import com.microsoft.jenkins.devspaces.util.AzureUtil;
+import hudson.util.Secret;
 
 public class AzdsCommand implements ICommand<AzdsCommand.IAzdsData> {
 
@@ -19,13 +24,50 @@ public class AzdsCommand implements ICommand<AzdsCommand.IAzdsData> {
         String spaceName = context.getSpaceName();
         String aksName = context.getAksName();
         String resourceGroupName = context.getResourceGroupName();
-        AzTask.login();
+        String userCredentialsId = context.getUserCredentialsId();
+        TaskResult taskResult;
 
-        AzTask.applyAzdsForAks(spaceName, resourceGroupName, aksName, repoPath);
+        StandardUsernamePasswordCredentials userPass = AzureUtil.getUserPass(context.getJobContext().getRun().getParent(), userCredentialsId);
+        String username = userPass.getUsername();
+        Secret password = userPass.getPassword();
 
-        AzdsTask.prep(repoPath);
+        try {
+            context.logStatus("Try to login");
+            taskResult = AzTask.login();
+//            AzTask.loginWithUserPass(username, password.getPlainText());
+            context.logStatus(taskResult.getOutput());
+            if (!taskResult.isSuccess()) {
+                context.logError(taskResult.getError());
+                return;
+            }
 
-        AzdsTask.up(repoPath);
+            context.logStatus(String.format("prepare dev spaces for %s %s with %s at %s", resourceGroupName, aksName, spaceName, repoPath));
+            taskResult = AzTask.applyAzdsForAks(spaceName, resourceGroupName, aksName, repoPath);
+            context.logStatus(taskResult.getOutput());
+            if (!taskResult.isSuccess()) {
+                context.logError(taskResult.getError());
+                return;
+            }
+
+            context.logStatus("azds prep");
+            taskResult = AzdsTask.prep(repoPath);
+            context.logStatus(taskResult.getOutput());
+            if (!taskResult.isSuccess()) {
+                context.logError(taskResult.getError());
+                return;
+            }
+
+            context.logStatus("azds up");
+            taskResult = AzdsTask.up(repoPath);
+            context.logStatus(taskResult.getOutput());
+            if (!taskResult.isSuccess()) {
+                context.logError(taskResult.getError());
+                return;
+            }
+        } catch (AzureCliException e) {
+            return;
+        }
+
 
         context.setCommandState(CommandState.Success);
     }
@@ -38,5 +80,7 @@ public class AzdsCommand implements ICommand<AzdsCommand.IAzdsData> {
         String getAksName();
 
         String getResourceGroupName();
+
+        String getUserCredentialsId();
     }
 }
