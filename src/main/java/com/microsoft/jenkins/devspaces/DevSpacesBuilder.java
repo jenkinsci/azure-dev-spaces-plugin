@@ -61,9 +61,7 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
 
         DevSpacesContext commandContext = new DevSpacesContext();
 
-        if (StringUtils.isBlank(repoPath)) {
-            this.repoPath = workspace.getRemote();
-        }
+        this.repoPath = StringUtils.isBlank(repoPath) ? workspace.getRemote() : workspace.child(repoPath).getRemote();
         commandContext.setRepoPath(this.repoPath);
         commandContext.setSpaceName(this.spaceName);
         commandContext.setAksName(this.aksName);

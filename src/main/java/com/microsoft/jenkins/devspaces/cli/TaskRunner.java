@@ -30,7 +30,7 @@ public class TaskRunner {
 
     public static final boolean isWindows = Util.isWindows();
     private static final String windowsCommand = "cmd /c %s";
-    private static final String nonWindowsCommand = "bash %s";
+    private static final String nonWindowsCommand = "%s";
 
     public String workDirectory;
     public RetryContext retryContext;
