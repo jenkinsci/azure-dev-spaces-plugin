@@ -6,6 +6,7 @@
 package com.microsoft.jenkins.devspaces.cli;
 
 import com.microsoft.jenkins.devspaces.exceptions.AzureCliException;
+import hudson.model.TaskListener;
 
 import java.io.IOException;
 
@@ -21,8 +22,14 @@ public class AzTask {
     public static final String AZURE_CLI_SET_UP_AZDS_COMMAND = "az aks use-dev-spaces -s %s -y -g %s -n %s";
     public static final String AZURE_CLI_SET_UP_AZDS_NAME = "User Azure Dev Spaces with a managed Kubernetes cluster";
 
-    public static TaskResult applyAzdsForAks(String spaceName, String resourceGroup, String aksName, String repoPath) throws AzureCliException {
-        TaskRunner runner = new TaskRunner(AZURE_CLI_SET_UP_AZDS_NAME, repoPath);
+    private TaskListener listener;
+
+    public AzTask(TaskListener listener) {
+        this.listener = listener;
+    }
+
+    public TaskResult applyAzdsForAks(String spaceName, String resourceGroup, String aksName, String repoPath) throws AzureCliException {
+        TaskRunner runner = new TaskRunner(AZURE_CLI_SET_UP_AZDS_NAME, repoPath, listener);
         try {
             return runner.run(String.format(AZURE_CLI_SET_UP_AZDS_COMMAND, spaceName, resourceGroup, aksName));
         } catch (IOException | InterruptedException e) {
@@ -30,8 +37,8 @@ public class AzTask {
         }
     }
 
-    public static TaskResult login() throws AzureCliException {
-        TaskRunner runner = new TaskRunner(AZURE_CLI_LOGIN_NAME, null);
+    public TaskResult login() throws AzureCliException {
+        TaskRunner runner = new TaskRunner(AZURE_CLI_LOGIN_NAME, null, listener);
         try {
             return runner.run(AZURE_CLI_LOGIN_COMMAND);
         } catch (IOException | InterruptedException e) {
@@ -39,8 +46,8 @@ public class AzTask {
         }
     }
 
-    public static void loginWithSP(String clientId, String tenantId, String key) {
-        TaskRunner runner = new TaskRunner(AZURE_CLI_LOGIN_SP_NAME, null);
+    public void loginWithSP(String clientId, String tenantId, String key) {
+        TaskRunner runner = new TaskRunner(AZURE_CLI_LOGIN_SP_NAME, null, listener);
         try {
             runner.run(String.format(AZURE_CLI_LOGIN_SP_COMMAND, clientId, key, tenantId));
             System.out.println(runner.getOutput());
@@ -49,8 +56,8 @@ public class AzTask {
         }
     }
 
-    public static TaskResult loginWithUserPass(String username, String password) throws AzureCliException {
-        TaskRunner runner = new TaskRunner(AZURE_CLI_LOGIN_USER_PASS_NAME, null);
+    public TaskResult loginWithUserPass(String username, String password) throws AzureCliException {
+        TaskRunner runner = new TaskRunner(AZURE_CLI_LOGIN_USER_PASS_NAME, null, listener);
         try {
             return runner.run(String.format(AZURE_CLI_LOGIN_USER_PASS_COMMAND, username, password));
         } catch (IOException | InterruptedException e) {
@@ -58,8 +65,8 @@ public class AzTask {
         }
     }
 
-    public static String getVersion() {
-        TaskRunner runner = new TaskRunner(AZURE_CLI_VERSION_NAME, null);
+    public String getVersion() {
+        TaskRunner runner = new TaskRunner(AZURE_CLI_VERSION_NAME, null, listener);
         try {
             runner.run(AZURE_CLI_VERSION_COMMAND);
         } catch (IOException | InterruptedException e) {

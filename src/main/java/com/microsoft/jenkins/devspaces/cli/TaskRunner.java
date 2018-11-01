@@ -8,21 +8,25 @@ package com.microsoft.jenkins.devspaces.cli;
 
 import com.microsoft.jenkins.devspaces.util.Constants;
 import com.microsoft.jenkins.devspaces.util.Util;
+import hudson.model.TaskListener;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class TaskRunner {
     private static final Logger LOGGER = Logger.getLogger(TaskRunner.class.getName());
     private String taskName;
+    private final TaskListener listener;
 
     public static final boolean isWindows = Util.isWindows();
     private static final String windowsCommand = "cmd /c %s";
@@ -34,9 +38,10 @@ public class TaskRunner {
     public StringBuilder outputSb = new StringBuilder();
     public StringBuilder errorSb = new StringBuilder();
 
-    public TaskRunner(String taskName, String workDirectory) {
+    public TaskRunner(String taskName, String workDirectory, TaskListener listener) {
         this.taskName = taskName;
         this.workDirectory = workDirectory;
+        this.listener = listener;
     }
 
     /**
@@ -57,21 +62,50 @@ public class TaskRunner {
         // TODO filter credentials in log
         LOGGER.log(Level.INFO, "Execute command {0} at {1} using {2}", new String[]{taskName, workDirectory, wholeCommand});
 
-        BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
-        BufferedReader error = new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8));
+//        BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+//        BufferedReader error = new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8));
+        StreamGobbler errorGobbler = new StreamGobbler(process.getErrorStream());
+        StreamGobbler outputGobbler = new StreamGobbler(process.getInputStream());
+        errorGobbler.start();
+        outputGobbler.start();
 
-        String line;
-        while ((line = in.readLine()) != null) {
-            this.outputSb.append(line);
-            this.outputSb.append(Constants.LINE_SEPARATOR);
+        String line = null, err = null;
+//        while (true) {
+//            if (in.ready()) {
+//                line = in.readLine();
+//                listener.getLogger().println(line);
+//            }
+//            if (error.ready()) {
+//                err = error.readLine();
+//                listener.getLogger().println(err);
+//            }
+//            if (line == null && err == null) {
+//                break;
+//            }
+//        }
+//        while (in.readLine() != null) {
+//            if (in.ready()) {
+//                listener.getLogger().println(in.readLine());
+//            }
+//            if (error.ready()) {
+//                listener.getLogger().println(error.readLine());
+//            }
+//        }
+        boolean hasFinished = process.waitFor(300, TimeUnit.SECONDS);
+        if (!hasFinished) {
+            process.destroy();
         }
-        while ((line = error.readLine()) != null) {
-            this.errorSb.append(line);
-            this.errorSb.append(Constants.LINE_SEPARATOR);
-        }
-        int exitCode = process.waitFor();
-        in.close();
-        error.close();
+        int exitCode = process.exitValue();
+//        while ((line = in.readLine()) != null) {
+//            this.outputSb.append(line);
+//            this.outputSb.append(Constants.LINE_SEPARATOR);
+//        }
+//        while ((line = error.readLine()) != null) {
+//            this.errorSb.append(line);
+//            this.errorSb.append(Constants.LINE_SEPARATOR);
+//        }
+//        in.close();
+//        error.close();
         LOGGER.log(Level.INFO, "Command {0} exits with code {1}", new Object[]{taskName, exitCode});
         return new TaskResult(taskName, outputSb.toString(), errorSb.toString(), exitCode == 0);
     }
@@ -119,5 +153,29 @@ public class TaskRunner {
 
     public String getError() {
         return this.errorSb.toString();
+    }
+
+    private class StreamGobbler extends Thread {
+        InputStream is;
+
+        private StreamGobbler(InputStream is) {
+            this.is = is;
+        }
+
+        @Override
+        public void run() {
+            try {
+                InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8);
+                BufferedReader br = new BufferedReader(isr);
+                String line;
+                while ((line = br.readLine()) != null) {
+                    synchronized (listener) {
+                        listener.getLogger().println(line);
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

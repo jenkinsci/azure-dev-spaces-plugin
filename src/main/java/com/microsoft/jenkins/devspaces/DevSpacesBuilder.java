@@ -27,7 +27,6 @@ import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.ListBoxModel;
-import hudson.util.Secret;
 import jenkins.tasks.SimpleBuildStep;
 import org.apache.commons.lang3.StringUtils;
 import org.jenkinsci.Symbol;
@@ -62,10 +61,14 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
 
         DevSpacesContext commandContext = new DevSpacesContext();
 
+        if (StringUtils.isBlank(repoPath)) {
+            this.repoPath = workspace.getRemote();
+        }
         commandContext.setRepoPath(this.repoPath);
         commandContext.setSpaceName(this.spaceName);
         commandContext.setAksName(this.aksName);
         commandContext.setResourceGroupName(this.resourceGroupName);
+        commandContext.setUserCredentialsId(this.userCredentialsId);
 
         commandContext.configure(run, workspace, launcher, listener);
 
