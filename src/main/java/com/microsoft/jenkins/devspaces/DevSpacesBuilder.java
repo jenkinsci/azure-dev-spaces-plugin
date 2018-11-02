@@ -50,6 +50,8 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
     private String spaceName;
     @DataBoundSetter
     private String userCredentialsId;
+    @DataBoundSetter
+    private String sharedSpaceName;
 
     @DataBoundConstructor
     public DevSpacesBuilder(String azureCredentialsId) {
@@ -64,6 +66,7 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
         this.repoPath = StringUtils.isBlank(repoPath) ? workspace.getRemote() : workspace.child(repoPath).getRemote();
         commandContext.setRepoPath(this.repoPath);
         commandContext.setSpaceName(this.spaceName);
+        commandContext.setSharedSpaceName(this.sharedSpaceName);
         commandContext.setAksName(this.aksName);
         commandContext.setResourceGroupName(this.resourceGroupName);
         commandContext.setUserCredentialsId(this.userCredentialsId);
@@ -96,7 +99,7 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
 
         public ListBoxModel doFillAzureCredentialsIdItems(@AncestorInPath Item owner) {
             StandardListBoxModel model = new StandardListBoxModel();
-            model.add("test", Constants.INVALID_OPTION);
+            model.add(Constants.EMPTY_SELECTION, Constants.INVALID_OPTION);
             model.includeAs(ACL.SYSTEM, owner, AzureBaseCredentials.class);
             return model;
         }
@@ -181,5 +184,9 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
 
     public String getUserCredentialsId() {
         return userCredentialsId;
+    }
+
+    public String getSharedSpaceName() {
+        return sharedSpaceName;
     }
 }

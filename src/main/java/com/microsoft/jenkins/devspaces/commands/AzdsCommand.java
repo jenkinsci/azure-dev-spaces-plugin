@@ -13,6 +13,7 @@ import com.microsoft.jenkins.devspaces.cli.AzTask;
 import com.microsoft.jenkins.devspaces.cli.AzdsTask;
 import com.microsoft.jenkins.devspaces.cli.TaskResult;
 import com.microsoft.jenkins.devspaces.exceptions.AzureCliException;
+import org.apache.commons.lang3.StringUtils;
 
 public class AzdsCommand implements ICommand<AzdsCommand.IAzdsData> {
 
@@ -20,6 +21,7 @@ public class AzdsCommand implements ICommand<AzdsCommand.IAzdsData> {
     public void execute(IAzdsData context) {
         String repoPath = context.getRepoPath();
         String spaceName = context.getSpaceName();
+        String sharedSpaceName = context.getSharedSpaceName();
         String aksName = context.getAksName();
         String resourceGroupName = context.getResourceGroupName();
 //        String userCredentialsId = context.getUserCredentialsId();
@@ -43,9 +45,10 @@ public class AzdsCommand implements ICommand<AzdsCommand.IAzdsData> {
 //                context.logError(taskResult.getError());
 //                return;
 //            }
+            String space = StringUtils.isBlank(sharedSpaceName) ? spaceName : sharedSpaceName + "/" + spaceName;
 
             context.logStatus(String.format("prepare dev spaces for %s %s with %s at %s", resourceGroupName, aksName, spaceName, repoPath));
-            taskResult = azTask.applyAzdsForAks(spaceName, resourceGroupName, aksName, repoPath);
+            taskResult = azTask.applyAzdsForAks(space, resourceGroupName, aksName, repoPath);
             context.logStatus(taskResult.getOutput());
             if (!taskResult.isSuccess()) {
                 context.logError(taskResult.getError());
@@ -79,6 +82,8 @@ public class AzdsCommand implements ICommand<AzdsCommand.IAzdsData> {
         String getRepoPath();
 
         String getSpaceName();
+
+        String getSharedSpaceName();
 
         String getAksName();
 

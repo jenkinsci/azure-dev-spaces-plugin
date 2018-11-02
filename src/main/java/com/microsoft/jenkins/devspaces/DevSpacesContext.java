@@ -21,6 +21,7 @@ public class DevSpacesContext extends BaseCommandContext
         implements AzdsCommand.IAzdsData {
     private String repoPath;
     private String spaceName;
+    private String sharedSpaceName;
     private String aksName;
     private String resourceGroupName;
     private String userCredentialsId;
@@ -57,6 +58,11 @@ public class DevSpacesContext extends BaseCommandContext
     }
 
     @Override
+    public String getSharedSpaceName() {
+        return this.sharedSpaceName;
+    }
+
+    @Override
     public String getAksName() {
         return this.aksName;
     }
@@ -89,5 +95,9 @@ public class DevSpacesContext extends BaseCommandContext
 
     public void setUserCredentialsId(String userCredentialsId) {
         this.userCredentialsId = userCredentialsId;
+    }
+
+    public void setSharedSpaceName(String sharedSpaceName) {
+        this.sharedSpaceName = sharedSpaceName;
     }
 }

@@ -18,10 +18,13 @@
     <f:entry title="${%repoPath_title}" field="repoPath">
         <f:textbox/>
     </f:entry>
+    <f:entry title="${%sharedSpaceName_title}" field="sharedSpaceName">
+        <f:textbox/>
+    </f:entry>
     <f:entry title="${%spaceName_title}" field="spaceName">
         <f:textbox/>
     </f:entry>
-    <f:entry title="${%userCredentials_title}" field="userCredentialsId">
-        <c:select expressionAllowed="false"/>
-    </f:entry>
+    <!--<f:entry title="${%userCredentials_title}" field="userCredentialsId">-->
+        <!--<c:select expressionAllowed="false"/>-->
+    <!--</f:entry>-->
 </j:jelly>

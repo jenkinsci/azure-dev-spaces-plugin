@@ -34,7 +34,7 @@ public class TaskRunner {
 
     public String workDirectory;
     public RetryContext retryContext;
-    public int retryTimes;
+    public int retryTimes = 3;
     public StringBuilder outputSb = new StringBuilder();
     public StringBuilder errorSb = new StringBuilder();
 
@@ -58,54 +58,27 @@ public class TaskRunner {
 
         String wholeCommand = String.format(isWindows ? windowsCommand : nonWindowsCommand, command);
         File dir = StringUtils.isBlank(this.workDirectory) ? null : new File(this.workDirectory);
-        Process process = Runtime.getRuntime().exec(wholeCommand, null, dir);
-        // TODO filter credentials in log
-        LOGGER.log(Level.INFO, "Execute command {0} at {1} using {2}", new String[]{taskName, workDirectory, wholeCommand});
+        int exitCode = 1;
+        while (exitCode != 0 && retryTimes > 0) {
+
+            Process process = Runtime.getRuntime().exec(wholeCommand, null, dir);
+            // TODO filter credentials in log
+            LOGGER.log(Level.INFO, "Execute command {0} at {1} using {2}", new String[]{taskName, workDirectory, wholeCommand});
 
 //        BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
 //        BufferedReader error = new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8));
-        StreamGobbler errorGobbler = new StreamGobbler(process.getErrorStream());
-        StreamGobbler outputGobbler = new StreamGobbler(process.getInputStream());
-        errorGobbler.start();
-        outputGobbler.start();
+            StreamGobbler errorGobbler = new StreamGobbler(process.getErrorStream());
+            StreamGobbler outputGobbler = new StreamGobbler(process.getInputStream());
+            errorGobbler.start();
+            outputGobbler.start();
 
-        String line = null, err = null;
-//        while (true) {
-//            if (in.ready()) {
-//                line = in.readLine();
-//                listener.getLogger().println(line);
-//            }
-//            if (error.ready()) {
-//                err = error.readLine();
-//                listener.getLogger().println(err);
-//            }
-//            if (line == null && err == null) {
-//                break;
-//            }
-//        }
-//        while (in.readLine() != null) {
-//            if (in.ready()) {
-//                listener.getLogger().println(in.readLine());
-//            }
-//            if (error.ready()) {
-//                listener.getLogger().println(error.readLine());
-//            }
-//        }
-        boolean hasFinished = process.waitFor(300, TimeUnit.SECONDS);
-        if (!hasFinished) {
-            process.destroy();
+            boolean hasFinished = process.waitFor(60, TimeUnit.SECONDS);
+            if (!hasFinished) {
+                process.destroy();
+            }
+            exitCode = process.exitValue();
+            retryTimes--;
         }
-        int exitCode = process.exitValue();
-//        while ((line = in.readLine()) != null) {
-//            this.outputSb.append(line);
-//            this.outputSb.append(Constants.LINE_SEPARATOR);
-//        }
-//        while ((line = error.readLine()) != null) {
-//            this.errorSb.append(line);
-//            this.errorSb.append(Constants.LINE_SEPARATOR);
-//        }
-//        in.close();
-//        error.close();
         LOGGER.log(Level.INFO, "Command {0} exits with code {1}", new Object[]{taskName, exitCode});
         return new TaskResult(taskName, outputSb.toString(), errorSb.toString(), exitCode == 0);
     }
