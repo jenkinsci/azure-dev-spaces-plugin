@@ -14,6 +14,7 @@ import com.microsoft.azure.management.compute.ContainerServiceOrchestratorTypes;
 import com.microsoft.azure.management.resources.GenericResource;
 import com.microsoft.azure.management.resources.ResourceGroup;
 import com.microsoft.azure.util.AzureBaseCredentials;
+import com.microsoft.jenkins.azurecommons.command.CommandState;
 import com.microsoft.jenkins.devspaces.util.AzureUtil;
 import com.microsoft.jenkins.devspaces.util.Constants;
 import hudson.Extension;
@@ -21,6 +22,7 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractProject;
 import hudson.model.Item;
+import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.security.ACL;
@@ -74,6 +76,10 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
         commandContext.configure(run, workspace, launcher, listener);
 
         commandContext.executeCommands();
+        CommandState commandState = commandContext.getCommandState();
+        if (commandState != CommandState.Success) {
+            run.setResult(Result.FAILURE);
+        }
     }
 
     @Override

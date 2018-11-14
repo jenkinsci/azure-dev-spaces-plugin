@@ -8,6 +8,7 @@ package com.microsoft.jenkins.devspaces.cli;
 
 import com.microsoft.jenkins.devspaces.util.Constants;
 import com.microsoft.jenkins.devspaces.util.Util;
+import hudson.EnvVars;
 import hudson.model.TaskListener;
 import org.apache.commons.lang3.StringUtils;
 
@@ -72,7 +73,7 @@ public class TaskRunner {
             errorGobbler.start();
             outputGobbler.start();
 
-            boolean hasFinished = process.waitFor(60, TimeUnit.SECONDS);
+            boolean hasFinished = process.waitFor(120, TimeUnit.SECONDS);
             if (!hasFinished) {
                 process.destroy();
             }
@@ -142,12 +143,21 @@ public class TaskRunner {
                 BufferedReader br = new BufferedReader(isr);
                 String line;
                 while ((line = br.readLine()) != null) {
+                    getEndpoint(line);
                     synchronized (listener) {
                         listener.getLogger().println(line);
                     }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
+            }
+        }
+
+        private void getEndpoint(String output) {
+            String http = "http://";
+            if (output.contains(http)) {
+                String substring = output.substring(output.indexOf(http));
+                EnvVars.masterEnvVars.put("dsEndpoint", substring);
             }
         }
     }
