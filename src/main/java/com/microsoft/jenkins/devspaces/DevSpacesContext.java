@@ -37,6 +37,7 @@ public class DevSpacesContext extends BaseCommandContext
     private String imageTag;
     private String namespace;
     private String endpointVariable;
+    private String kubeconfig;
 
     protected void configure(Run<?, ?> run,
                              FilePath workspace,
@@ -76,6 +77,11 @@ public class DevSpacesContext extends BaseCommandContext
     @Override
     public String getSharedSpaceName() {
         return this.sharedSpaceName;
+    }
+
+    @Override
+    public String getKubeconfig() {
+        return this.kubeconfig;
     }
 
     @Override
@@ -159,5 +165,9 @@ public class DevSpacesContext extends BaseCommandContext
 
     public void setEndpointVariable(String endpointVariable) {
         this.endpointVariable = endpointVariable;
+    }
+
+    public void setKubeconfig(String kubeconfig) {
+        this.kubeconfig = kubeconfig;
     }
 }

@@ -33,6 +33,9 @@
     <f:entry title="${%imageTag_title}" field="imageTag">
         <f:textbox/>
     </f:entry>
+    <f:entry title="${%kubeconfigId_title}" field="kubeconfigId">
+        <c:select expressionAllowed="false" />
+    </f:entry>
     <f:entry title="${%endpointVariable_title}" field="endpointVariable">
         <f:textbox/>
     </f:entry>

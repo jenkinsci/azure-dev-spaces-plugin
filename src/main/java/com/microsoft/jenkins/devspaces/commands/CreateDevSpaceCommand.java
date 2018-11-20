@@ -13,6 +13,7 @@ import io.kubernetes.client.models.V1ObjectMeta;
 import io.kubernetes.client.util.Config;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,7 +25,8 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
     @Override
     public void execute(ICreateDevSpaceData context) {
         try {
-            ApiClient client = Config.defaultClient();
+            StringReader reader = new StringReader(context.getKubeconfig());
+            ApiClient client = Config.fromConfig(reader);
             Configuration.setDefaultApiClient(client);
             CoreV1Api api = new CoreV1Api();
             String spaceName = context.getSpaceName();
@@ -67,5 +69,7 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
         String getSpaceName();
 
         String getSharedSpaceName();
+
+        String getKubeconfig();
     }
 }

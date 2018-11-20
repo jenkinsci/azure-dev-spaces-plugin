@@ -15,6 +15,7 @@ import io.kubernetes.client.util.Config;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.List;
 
 public class GetEndpointCommand implements ICommand<GetEndpointCommand.IGetEndpointData> {
@@ -25,7 +26,8 @@ public class GetEndpointCommand implements ICommand<GetEndpointCommand.IGetEndpo
     public void execute(IGetEndpointData context) {
 
         try {
-            ApiClient client = Config.defaultClient();
+            StringReader reader = new StringReader(context.getKubeconfig());
+            ApiClient client = Config.fromConfig(reader);
             Configuration.setDefaultApiClient(client);
 
             ExtensionsV1beta1Api extensionsV1beta1Api = new ExtensionsV1beta1Api();
@@ -54,5 +56,7 @@ public class GetEndpointCommand implements ICommand<GetEndpointCommand.IGetEndpo
         String getNamespace();
 
         String getEndpointVariable();
+
+        String getKubeconfig();
     }
 }

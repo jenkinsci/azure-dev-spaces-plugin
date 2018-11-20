@@ -5,8 +5,11 @@
 
 package com.microsoft.jenkins.devspaces;
 
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.microsoft.azure.PagedList;
 import com.microsoft.azure.management.Azure;
 import com.microsoft.azure.management.compute.ContainerService;
@@ -17,6 +20,7 @@ import com.microsoft.azure.util.AzureBaseCredentials;
 import com.microsoft.jenkins.azurecommons.command.CommandState;
 import com.microsoft.jenkins.devspaces.util.AzureUtil;
 import com.microsoft.jenkins.devspaces.util.Constants;
+import com.microsoft.jenkins.kubernetes.credentials.KubeconfigCredentials;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -39,6 +43,7 @@ import org.kohsuke.stapler.QueryParameter;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.Collections;
 
 public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
     private String azureCredentialsId;
@@ -62,6 +67,8 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
     private String imageTag;
     @DataBoundSetter
     private String endpointVariable;
+    @DataBoundSetter
+    private String kubeconfigId;
 
     @DataBoundConstructor
     public DevSpacesBuilder(String azureCredentialsId) {
@@ -86,6 +93,9 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
         this.helmChartLocation = StringUtils.isBlank(helmChartLocation) ? workspace.getRemote() : workspace.child(helmChartLocation).getRemote();
         commandContext.setHelmChartLocation(this.helmChartLocation);
 
+        String configContent = getConfigContent(run.getParent());
+        commandContext.setKubeconfig(configContent);
+
         commandContext.configure(run, workspace, launcher, listener);
 
         commandContext.executeCommands();
@@ -93,6 +103,25 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
         if (commandState != CommandState.Success) {
             run.setResult(Result.FAILURE);
         }
+    }
+
+    private String getConfigContent(Item owner) {
+        final String configId = getKubeconfigId();
+        if (StringUtils.isNotBlank(configId)) {
+            final KubeconfigCredentials credentials = CredentialsMatchers.firstOrNull(
+                    CredentialsProvider.lookupCredentials(
+                            KubeconfigCredentials.class,
+                            owner,
+                            ACL.SYSTEM,
+                            Collections.emptyList()),
+                    CredentialsMatchers.withId(configId));
+            if (credentials == null) {
+                throw new IllegalArgumentException("Cannot find kubeconfig credentials with id " + configId);
+            }
+            credentials.bindToAncestor(owner);
+            return credentials.getContent();
+        }
+        throw new IllegalStateException();
     }
 
     @Override
@@ -120,6 +149,13 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
             StandardListBoxModel model = new StandardListBoxModel();
             model.add(Constants.EMPTY_SELECTION, Constants.INVALID_OPTION);
             model.includeAs(ACL.SYSTEM, owner, AzureBaseCredentials.class);
+            return model;
+        }
+
+        public ListBoxModel doFillKubeconfigIdItems(@AncestorInPath Item owner) {
+            StandardListBoxModel model = new StandardListBoxModel();
+            model.includeEmptyValue();
+            model.includeAs(ACL.SYSTEM, owner, KubeconfigCredentials.class);
             return model;
         }
 
@@ -223,5 +259,9 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
 
     public String getEndpointVariable() {
         return endpointVariable;
+    }
+
+    public String getKubeconfigId() {
+        return kubeconfigId;
     }
 }

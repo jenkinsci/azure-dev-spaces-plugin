@@ -45,7 +45,7 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
             context.logError(e);
         }
         assert chart != null;
-        try (final DefaultKubernetesClient client = new DefaultKubernetesClient();
+        try (final DefaultKubernetesClient client = DefaultKubernetesClient.fromConfig(context.getKubeconfig());
              final Tiller tiller = new Tiller(client, "azds");
              final ReleaseManager releaseManager = new ReleaseManager(tiller)) {
             String namespace = context.getNamespace();
@@ -90,5 +90,7 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
         String getImageTag();
 
         String getHelmChartLocation();
+
+        String getKubeconfig();
     }
 }
