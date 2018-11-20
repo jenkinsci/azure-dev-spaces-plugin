@@ -10,6 +10,9 @@ import com.microsoft.jenkins.azurecommons.command.CommandService;
 import com.microsoft.jenkins.azurecommons.command.IBaseCommandData;
 import com.microsoft.jenkins.azurecommons.command.ICommand;
 import com.microsoft.jenkins.devspaces.commands.AzdsCommand;
+import com.microsoft.jenkins.devspaces.commands.CreateDevSpaceCommand;
+import com.microsoft.jenkins.devspaces.commands.DeployHelmChartCommand;
+import com.microsoft.jenkins.devspaces.commands.GetEndpointCommand;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Run;
@@ -18,13 +21,22 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 
 public class DevSpacesContext extends BaseCommandContext
-        implements AzdsCommand.IAzdsData {
+        implements AzdsCommand.IAzdsData,
+        CreateDevSpaceCommand.ICreateDevSpaceData,
+        DeployHelmChartCommand.IDeployHelmChartData,
+        GetEndpointCommand.IGetEndpointData {
     private String repoPath;
     private String spaceName;
     private String sharedSpaceName;
     private String aksName;
     private String resourceGroupName;
+    @Deprecated
     private String userCredentialsId;
+    private String helmChartLocation;
+    private String imageRepository;
+    private String imageTag;
+    private String namespace;
+    private String endpointVariable;
 
     protected void configure(Run<?, ?> run,
                              FilePath workspace,
@@ -32,7 +44,11 @@ public class DevSpacesContext extends BaseCommandContext
                              TaskListener taskListener) {
 
         CommandService.Builder builder = CommandService.builder();
-        builder.withStartCommand(AzdsCommand.class);
+//        builder.withStartCommand(AzdsCommand.class);
+
+        builder.withStartCommand(CreateDevSpaceCommand.class);
+        builder.withTransition(CreateDevSpaceCommand.class, DeployHelmChartCommand.class);
+        builder.withTransition(DeployHelmChartCommand.class, GetEndpointCommand.class);
 
         super.configure(run, workspace, launcher, taskListener, builder.build());
     }
@@ -77,6 +93,30 @@ public class DevSpacesContext extends BaseCommandContext
         return this.userCredentialsId;
     }
 
+    @Override
+    public String getNamespace() {
+        return this.namespace;
+    }
+
+    @Override
+    public String getImageRepository() {
+        return this.imageRepository;
+    }
+
+    public String getHelmChartLocation() {
+        return helmChartLocation;
+    }
+
+    @Override
+    public String getEndpointVariable() {
+        return endpointVariable;
+    }
+
+    @Override
+    public String getImageTag() {
+        return this.imageTag;
+    }
+
     public void setRepoPath(String repoPath) {
         this.repoPath = repoPath;
     }
@@ -99,5 +139,25 @@ public class DevSpacesContext extends BaseCommandContext
 
     public void setSharedSpaceName(String sharedSpaceName) {
         this.sharedSpaceName = sharedSpaceName;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
+    public void setHelmChartLocation(String helmChartLocation) {
+        this.helmChartLocation = helmChartLocation;
+    }
+
+    public void setImageRepository(String imageRepository) {
+        this.imageRepository = imageRepository;
+    }
+
+    public void setImageTag(String imageTag) {
+        this.imageTag = imageTag;
+    }
+
+    public void setEndpointVariable(String endpointVariable) {
+        this.endpointVariable = endpointVariable;
     }
 }

@@ -15,16 +15,25 @@
     <f:entry title="${%aks_title}" field="aksName">
         <f:select/>
     </f:entry>
-    <f:entry title="${%repoPath_title}" field="repoPath">
-        <f:textbox/>
-    </f:entry>
+    <!--<f:entry title="${%repoPath_title}" field="repoPath">-->
+    <!--<f:textbox/>-->
+    <!--</f:entry>-->
     <f:entry title="${%sharedSpaceName_title}" field="sharedSpaceName">
         <f:textbox/>
     </f:entry>
     <f:entry title="${%spaceName_title}" field="spaceName">
         <f:textbox/>
     </f:entry>
-    <!--<f:entry title="${%userCredentials_title}" field="userCredentialsId">-->
-        <!--<c:select expressionAllowed="false"/>-->
-    <!--</f:entry>-->
+    <f:entry title="${%helmChartLocation_title}" field="helmChartLocation">
+        <f:textbox/>
+    </f:entry>
+    <f:entry title="${%imageRepository_title}" field="imageRepository">
+        <f:textbox/>
+    </f:entry>
+    <f:entry title="${%imageTag_title}" field="imageTag">
+        <f:textbox/>
+    </f:entry>
+    <f:entry title="${%endpointVariable_title}" field="endpointVariable">
+        <f:textbox/>
+    </f:entry>
 </j:jelly>

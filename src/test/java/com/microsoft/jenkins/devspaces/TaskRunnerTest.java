@@ -2,7 +2,6 @@ package com.microsoft.jenkins.devspaces;
 
 import com.microsoft.jenkins.devspaces.cli.TaskRunner;
 import com.microsoft.jenkins.devspaces.util.Constants;
-import hudson.model.TaskListener;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;

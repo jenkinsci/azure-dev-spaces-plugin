@@ -54,6 +54,14 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
     private String userCredentialsId;
     @DataBoundSetter
     private String sharedSpaceName;
+    @DataBoundSetter
+    private String helmChartLocation;
+    @DataBoundSetter
+    private String imageRepository;
+    @DataBoundSetter
+    private String imageTag;
+    @DataBoundSetter
+    private String endpointVariable;
 
     @DataBoundConstructor
     public DevSpacesBuilder(String azureCredentialsId) {
@@ -62,7 +70,6 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
 
     @Override
     public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
-
         DevSpacesContext commandContext = new DevSpacesContext();
 
         this.repoPath = StringUtils.isBlank(repoPath) ? workspace.getRemote() : workspace.child(repoPath).getRemote();
@@ -72,6 +79,12 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
         commandContext.setAksName(this.aksName);
         commandContext.setResourceGroupName(this.resourceGroupName);
         commandContext.setUserCredentialsId(this.userCredentialsId);
+        commandContext.setNamespace(this.spaceName);
+        commandContext.setImageRepository(this.imageRepository);
+        commandContext.setImageTag(this.imageTag);
+        commandContext.setEndpointVariable(this.endpointVariable);
+        this.helmChartLocation = StringUtils.isBlank(helmChartLocation) ? workspace.getRemote() : workspace.child(helmChartLocation).getRemote();
+        commandContext.setHelmChartLocation(this.helmChartLocation);
 
         commandContext.configure(run, workspace, launcher, listener);
 
@@ -194,5 +207,21 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
 
     public String getSharedSpaceName() {
         return sharedSpaceName;
+    }
+
+    public String getHelmChartLocation() {
+        return helmChartLocation;
+    }
+
+    public String getImageRepository() {
+        return imageRepository;
+    }
+
+    public String getImageTag() {
+        return imageTag;
+    }
+
+    public String getEndpointVariable() {
+        return endpointVariable;
     }
 }
