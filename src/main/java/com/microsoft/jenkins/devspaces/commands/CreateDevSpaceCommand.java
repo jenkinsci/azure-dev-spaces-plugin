@@ -32,24 +32,28 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
             String spaceName = context.getSpaceName();
             String parentSpaceName = context.getSharedSpaceName();
 
-//            V1Namespace namespace = api.readNamespace(spaceName, "false", false, false);
-//            if (namespace != null) {
-//                V1ObjectMeta metadata = namespace.getMetadata();
-//                Map<String, String> labels = metadata.getLabels();
-//                if (labels != null && TRUE.equals(labels.get(AZDS_ENABLE_LABEL)) && parentSpaceName.equals(labels.get(AZDS_PARENT_SPACE_LABEL))) {
-//                    context.logStatus(String.format("using existing dev space %s", spaceName));
-//                    context.setCommandState(CommandState.Success);
-//                } else {
-//                    context.logStatus(String.format("dev space %s has already exists", spaceName));
-//                    context.setCommandState(CommandState.HasError);
-//                }
-//                return;
-//            }
+            V1Namespace namespace = null;
+            try {
+                namespace = api.readNamespace(spaceName, "false", false, false);
+            } catch (ApiException ignore) {
+            }
+            if (namespace != null) {
+                V1ObjectMeta metadata = namespace.getMetadata();
+                Map<String, String> labels = metadata.getLabels();
+                if (labels != null && TRUE.equals(labels.get(AZDS_ENABLE_LABEL)) && parentSpaceName.equals(labels.get(AZDS_PARENT_SPACE_LABEL))) {
+                    context.logStatus(String.format("using existing dev space %s", spaceName));
+                    context.setCommandState(CommandState.Success);
+                } else {
+                    context.logStatus(String.format("dev space %s has already exists", spaceName));
+                    context.setCommandState(CommandState.HasError);
+                }
+                return;
+            }
 
             Map<String, String> labels = new HashMap<>();
             labels.put(AZDS_ENABLE_LABEL, TRUE);
             labels.put(AZDS_PARENT_SPACE_LABEL, parentSpaceName);
-            V1Namespace namespace = new V1NamespaceBuilder()
+            namespace = new V1NamespaceBuilder()
                     .withNewMetadata()
                     .withName(spaceName)
                     .withLabels(labels)
