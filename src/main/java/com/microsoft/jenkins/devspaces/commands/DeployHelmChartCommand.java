@@ -8,7 +8,9 @@ import hapi.chart.ChartOuterClass;
 import hapi.release.ReleaseOuterClass;
 import hapi.services.tiller.Tiller.InstallReleaseRequest;
 import hapi.services.tiller.Tiller.InstallReleaseResponse;
+import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+import io.kubernetes.client.ApiClient;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.microbean.helm.ReleaseManager;
 import org.microbean.helm.Tiller;
@@ -45,7 +47,8 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
             context.logError(e);
         }
         assert chart != null;
-        try (final DefaultKubernetesClient client = DefaultKubernetesClient.fromConfig(context.getKubeconfig());
+        String kubeConfig = context.getKubeconfig();
+        try (final DefaultKubernetesClient client = new DefaultKubernetesClient(Config.fromKubeconfig(kubeConfig));
              final Tiller tiller = new Tiller(client, "azds");
              final ReleaseManager releaseManager = new ReleaseManager(tiller)) {
             String namespace = context.getNamespace();
