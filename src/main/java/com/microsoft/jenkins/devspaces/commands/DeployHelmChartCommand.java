@@ -4,13 +4,23 @@ import com.fasterxml.jackson.dataformat.yaml.snakeyaml.Yaml;
 import com.microsoft.jenkins.azurecommons.command.CommandState;
 import com.microsoft.jenkins.azurecommons.command.IBaseCommandData;
 import com.microsoft.jenkins.azurecommons.command.ICommand;
+import com.microsoft.jenkins.kubernetes.KubernetesClientWrapper;
+import com.microsoft.jenkins.kubernetes.credentials.ResolvedDockerRegistryEndpoint;
+import com.microsoft.jenkins.kubernetes.util.DockerConfigBuilder;
 import hapi.chart.ChartOuterClass;
 import hapi.release.ReleaseOuterClass;
 import hapi.services.tiller.Tiller.InstallReleaseRequest;
 import hapi.services.tiller.Tiller.InstallReleaseResponse;
+import hudson.EnvVars;
+import hudson.model.Item;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.kubernetes.client.ApiClient;
+import io.kubernetes.client.ApiException;
+import io.kubernetes.client.Configuration;
+import io.kubernetes.client.apis.CoreV1Api;
+import io.kubernetes.client.models.V1Secret;
+import io.kubernetes.client.models.V1SecretBuilder;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.microbean.helm.ReleaseManager;
 import org.microbean.helm.Tiller;
@@ -18,10 +28,13 @@ import org.microbean.helm.chart.DirectoryChartLoader;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +61,27 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
         }
         assert chart != null;
         String kubeConfig = context.getKubeconfig();
+
+        String secretNamespace = context.getSecretNamespace();
+        String secretNameCfg = context.getSecretName();
+        String defaultSecretNameSeed = context.getJobContext().getRun().getDisplayName();
+        EnvVars envVars = context.getEnvVars();
+        String secretName = null;
+        try {
+            List<ResolvedDockerRegistryEndpoint> dockerRegistryEndpoints = context.resolveEndpoints(context.getJobContext().getOwner());
+            if (!dockerRegistryEndpoints.isEmpty()) {
+                secretName =
+                        KubernetesClientWrapper.prepareSecretName(secretNameCfg, defaultSecretNameSeed, envVars);
+
+                createOrReplaceSecrets(secretNamespace, secretName, dockerRegistryEndpoints, context.getKubeconfig());
+
+//                envVars.put(Constants.KUBERNETES_SECRET_NAME_PROP, secretName);
+//                result.extraEnvVars.put(Constants.KUBERNETES_SECRET_NAME_PROP, secretName);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         try (final DefaultKubernetesClient client = new DefaultKubernetesClient(Config.fromKubeconfig(kubeConfig));
              final Tiller tiller = new Tiller(client, "azds");
              final ReleaseManager releaseManager = new ReleaseManager(tiller)) {
@@ -65,6 +99,14 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
             image.put("repository", imageRepository);
             image.put("tag", imageTag);
             yaml.put("image", image);
+
+            if (secretName != null) {
+                final Map<String, String> imagePullSecret = new LinkedHashMap<>();
+                imagePullSecret.put("name", secretName);
+                final List<Map<String, String>> imagePullSecrets = new ArrayList<>();
+                imagePullSecrets.add(imagePullSecret);
+                yaml.put("imagePullSecrets", imagePullSecrets);
+            }
 
             final Map<String, List<String>> ingress = new LinkedHashMap<>();
             List<String> hosts = new ArrayList<>();
@@ -85,6 +127,43 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
         }
     }
 
+    public void createOrReplaceSecrets(
+            String kubernetesNamespace,
+            String secretName,
+            List<ResolvedDockerRegistryEndpoint> credentials,
+            String kubeconfig) throws IOException {
+
+        DockerConfigBuilder dockerConfigBuilder = new DockerConfigBuilder(credentials);
+        String dockercfg = dockerConfigBuilder.buildDockercfgString();
+//        String dockercfg = dockerConfigBuilder.buildDockercfgBase64();
+
+        Map<String, byte[]> data = new HashMap<>();
+        data.put(".dockercfg", dockercfg.getBytes(StandardCharsets.UTF_8));
+//        data.put(".dockercfg", dockercfg.getBytes(StandardCharsets.UTF_8));
+//        V1Secret secret = new V1SecretBuilder()
+//                .withNewMetadata()
+//                .withName(secretName)
+        V1Secret secret = new V1SecretBuilder()
+                .withNewMetadata()
+                .withName(secretName)
+                .withNamespace(kubernetesNamespace)
+                .endMetadata()
+                .withData(data)
+                .withType("kubernetes.io/dockercfg")
+                .build();
+        // TODO createOrUpdate?
+        StringReader reader = new StringReader(kubeconfig);
+        ApiClient client = io.kubernetes.client.util.Config.fromConfig(reader);
+        client.setDebugging(true);
+        Configuration.setDefaultApiClient(client);
+        CoreV1Api coreV1Api = new CoreV1Api();
+        try {
+            coreV1Api.createNamespacedSecret(kubernetesNamespace, secret, "true");
+        } catch (ApiException e) {
+            e.printStackTrace();
+        }
+    }
+
     public interface IDeployHelmChartData extends IBaseCommandData {
         String getNamespace();
 
@@ -95,5 +174,11 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
         String getHelmChartLocation();
 
         String getKubeconfig();
+
+        String getSecretNamespace();
+
+        String getSecretName();
+
+        List<ResolvedDockerRegistryEndpoint> resolveEndpoints(Item context) throws IOException;
     }
 }

@@ -13,12 +13,20 @@ import com.microsoft.jenkins.devspaces.commands.AzdsCommand;
 import com.microsoft.jenkins.devspaces.commands.CreateDevSpaceCommand;
 import com.microsoft.jenkins.devspaces.commands.DeployHelmChartCommand;
 import com.microsoft.jenkins.devspaces.commands.GetEndpointCommand;
+import com.microsoft.jenkins.kubernetes.credentials.ResolvedDockerRegistryEndpoint;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.model.Item;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import org.jenkinsci.plugins.docker.commons.credentials.DockerRegistryEndpoint;
+import org.jenkinsci.plugins.docker.commons.credentials.DockerRegistryToken;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DevSpacesContext extends BaseCommandContext
         implements AzdsCommand.IAzdsData,
@@ -38,6 +46,10 @@ public class DevSpacesContext extends BaseCommandContext
     private String namespace;
     private String endpointVariable;
     private String kubeconfig;
+
+    private String secretNamespace;
+    private String secretName;
+    private List<DockerRegistryEndpoint> dockerCredentials;
 
     protected void configure(Run<?, ?> run,
                              FilePath workspace,
@@ -82,6 +94,20 @@ public class DevSpacesContext extends BaseCommandContext
     @Override
     public String getKubeconfig() {
         return this.kubeconfig;
+    }
+
+    @Override
+    public String getSecretNamespace() {
+        return this.secretNamespace;
+    }
+
+    @Override
+    public String getSecretName() {
+        return this.secretName;
+    }
+
+    public List<DockerRegistryEndpoint> getDockerCredentials() {
+        return this.dockerCredentials;
     }
 
     @Override
@@ -169,5 +195,31 @@ public class DevSpacesContext extends BaseCommandContext
 
     public void setKubeconfig(String kubeconfig) {
         this.kubeconfig = kubeconfig;
+    }
+
+    public void setSecretNamespace(String secretNamespace) {
+        this.secretNamespace = secretNamespace;
+    }
+
+    public void setSecretName(String secretName) {
+        this.secretName = secretName;
+    }
+
+    public void setDockerCredentials(List<DockerRegistryEndpoint> dockerCredentials) {
+        this.dockerCredentials = dockerCredentials;
+    }
+
+    @Override
+    public List<ResolvedDockerRegistryEndpoint> resolveEndpoints(Item context) throws IOException {
+        List<ResolvedDockerRegistryEndpoint> endpoints = new ArrayList<>();
+        List<DockerRegistryEndpoint> configured = getDockerCredentials();
+        for (DockerRegistryEndpoint endpoint : configured) {
+            DockerRegistryToken token = endpoint.getToken(context);
+            if (token == null) {
+                throw new IllegalArgumentException("No credentials found for " + endpoint);
+            }
+            endpoints.add(new ResolvedDockerRegistryEndpoint(endpoint.getEffectiveUrl(), token));
+        }
+        return endpoints;
     }
 }
