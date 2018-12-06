@@ -3,6 +3,7 @@ package com.microsoft.jenkins.devspaces.commands;
 import com.microsoft.jenkins.azurecommons.command.CommandState;
 import com.microsoft.jenkins.azurecommons.command.IBaseCommandData;
 import com.microsoft.jenkins.azurecommons.command.ICommand;
+import hudson.EnvVars;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.Configuration;
@@ -21,6 +22,7 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
     private static final String AZDS_ENABLE_LABEL = "azds.io/space";
     private static final String AZDS_PARENT_SPACE_LABEL = "azds.io/parent-space";
     private static final String TRUE = "true";
+    private static final String AZDS_SPACE_PREFIX = "azdsspace";
 
     @Override
     public void execute(ICreateDevSpaceData context) {
@@ -31,6 +33,10 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
             CoreV1Api api = new CoreV1Api();
             String spaceName = context.getSpaceName();
             String parentSpaceName = context.getSharedSpaceName();
+
+            String spacePrefix = String.format("%s.s", spaceName);
+            EnvVars.masterEnvVars.put(AZDS_SPACE_PREFIX, spacePrefix);
+            context.logStatus(String.format("bind environment variable %s with %s", AZDS_SPACE_PREFIX, spacePrefix));
 
             V1Namespace namespace = null;
             try {

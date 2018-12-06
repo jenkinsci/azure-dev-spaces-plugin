@@ -4,13 +4,16 @@ import com.fasterxml.jackson.dataformat.yaml.snakeyaml.Yaml;
 import com.microsoft.jenkins.azurecommons.command.CommandState;
 import com.microsoft.jenkins.azurecommons.command.IBaseCommandData;
 import com.microsoft.jenkins.azurecommons.command.ICommand;
+import com.microsoft.jenkins.devspaces.HelmContext;
 import com.microsoft.jenkins.kubernetes.KubernetesClientWrapper;
 import com.microsoft.jenkins.kubernetes.credentials.ResolvedDockerRegistryEndpoint;
 import com.microsoft.jenkins.kubernetes.util.DockerConfigBuilder;
 import hapi.chart.ChartOuterClass;
 import hapi.release.ReleaseOuterClass;
 import hapi.services.tiller.Tiller.InstallReleaseRequest;
-import hapi.services.tiller.Tiller.InstallReleaseResponse;
+import hapi.services.tiller.Tiller.ListReleasesRequest;
+import hapi.services.tiller.Tiller.ListReleasesResponse;
+import hapi.services.tiller.Tiller.UpdateReleaseRequest;
 import hudson.EnvVars;
 import hudson.model.Item;
 import io.fabric8.kubernetes.client.Config;
@@ -21,7 +24,6 @@ import io.kubernetes.client.Configuration;
 import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.models.V1Secret;
 import io.kubernetes.client.models.V1SecretBuilder;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.microbean.helm.ReleaseManager;
 import org.microbean.helm.Tiller;
 import org.microbean.helm.chart.DirectoryChartLoader;
@@ -35,11 +37,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.IDeployHelmChartData> {
     @Override
@@ -88,11 +89,6 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
             String namespace = context.getNamespace();
             String imageRepository = context.getImageRepository();
             String imageTag = context.getImageTag();
-            final InstallReleaseRequest.Builder requestBuilder = InstallReleaseRequest.newBuilder();
-            requestBuilder.setNamespace(namespace);
-            requestBuilder.setTimeout(300L);
-            requestBuilder.setName("test-charts-" + RandomStringUtils.randomAlphanumeric(8).toLowerCase()); // Set the Helm release name
-            requestBuilder.setWait(true); // Wait for Pods to be ready
 
             final Map<String, Object> yaml = new LinkedHashMap<>();
             final Map<String, String> image = new LinkedHashMap<>();
@@ -114,18 +110,83 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
             ingress.put("hosts", hosts);
             yaml.put("ingress", ingress);
             final String yamlString = new Yaml().dump(yaml);
-            requestBuilder.getValuesBuilder().setRaw(yamlString);
 
-            final Future<InstallReleaseResponse> releaseFuture = releaseManager.install(requestBuilder, chart);
-            assert releaseFuture != null;
-            final ReleaseOuterClass.Release release = releaseFuture.get().getRelease();
-            assert release != null;
+            HelmContext helmContext = new HelmContext();
+            helmContext.setNamespace(namespace);
+            helmContext.setReleaseName(generateHelmReleaseName(namespace, helmChartLocation));
+            helmContext.setChart(chart);
+            helmContext.setTimeout(300);
+            helmContext.setRawValue(yamlString);
+
+            createOrUpdateHelm(releaseManager, helmContext);
+
             context.setCommandState(CommandState.Success);
-        } catch (IOException | InterruptedException | ExecutionException e) {
+        } catch (IOException e) {
             context.logError(e);
             context.setCommandState(CommandState.HasError);
         }
     }
+
+    private String generateHelmReleaseName(String namespace, String chartLocation) {
+        String chartName = chartLocation.substring(chartLocation.lastIndexOf(System.getProperty("file.separator")) + 1);
+        return String.format("%s-%s", namespace, chartName);
+    }
+
+    private void createOrUpdateHelm(ReleaseManager releaseManager, HelmContext helmContext) {
+        if (isHelmReleaseExist(releaseManager, helmContext)) {
+            updateHelmRelease(releaseManager, helmContext);
+        } else {
+            installHelmRelease(releaseManager, helmContext);
+        }
+    }
+
+    private boolean isHelmReleaseExist(ReleaseManager releaseManager, HelmContext helmContext) {
+        ListReleasesRequest.Builder builder = ListReleasesRequest.newBuilder();
+        builder.setNamespace(helmContext.getNamespace());
+        Iterator<ListReleasesResponse> responses = releaseManager.list(builder.build());
+        while (responses.hasNext()) {
+            ListReleasesResponse response = responses.next();
+            List<ReleaseOuterClass.Release> releasesList = response.getReleasesList();
+            for (ReleaseOuterClass.Release release : releasesList) {
+                if (helmContext.getReleaseName().equals(release.getName())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void installHelmRelease(ReleaseManager releaseManager, HelmContext helmContext) {
+        final InstallReleaseRequest.Builder requestBuilder = InstallReleaseRequest.newBuilder();
+        requestBuilder.setNamespace(helmContext.getNamespace());
+        requestBuilder.setTimeout(helmContext.getTimeout());
+        requestBuilder.setName(helmContext.getReleaseName());
+        requestBuilder.getValuesBuilder().setRaw(helmContext.getRawValue());
+        requestBuilder.setWait(true); // Wait for Pods to be ready
+
+        try {
+            releaseManager.install(requestBuilder, helmContext.getChart());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void updateHelmRelease(ReleaseManager releaseManager, HelmContext helmContext) {
+        UpdateReleaseRequest.Builder builder = UpdateReleaseRequest.newBuilder();
+
+        builder.setName(helmContext.getReleaseName());
+        builder.setTimeout(helmContext.getTimeout());
+        builder.getValuesBuilder().setRaw(helmContext.getRawValue());
+        builder.setWait(true);
+
+        try {
+            releaseManager.update(builder, helmContext.getChart());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     public void createOrReplaceSecrets(
             String kubernetesNamespace,
@@ -151,14 +212,17 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
                 .withData(data)
                 .withType("kubernetes.io/dockercfg")
                 .build();
-        // TODO createOrUpdate?
         StringReader reader = new StringReader(kubeconfig);
         ApiClient client = io.kubernetes.client.util.Config.fromConfig(reader);
-        client.setDebugging(true);
         Configuration.setDefaultApiClient(client);
         CoreV1Api coreV1Api = new CoreV1Api();
         try {
-            coreV1Api.createNamespacedSecret(kubernetesNamespace, secret, "true");
+            V1Secret secret1 = coreV1Api.readNamespacedSecret(secretName, kubernetesNamespace, "ture", false, false);
+            if (secret1 == null) {
+                coreV1Api.createNamespacedSecret(kubernetesNamespace, secret, "false");
+            } else {
+                coreV1Api.replaceNamespacedSecret(secretName, kubernetesNamespace, secret, "false");
+            }
         } catch (ApiException e) {
             e.printStackTrace();
         }
