@@ -5,6 +5,9 @@
 
 package com.microsoft.jenkins.devspaces.cli;
 
+import com.microsoft.jenkins.devspaces.exceptions.AzureCliException;
+import hudson.model.TaskListener;
+
 import java.io.IOException;
 
 public class AzdsTask {
@@ -17,44 +20,45 @@ public class AzdsTask {
     public static final String AZDS_LIST_SPACE_COMMAND = "azds list";
     public static final String AZDS_LIST_SPACE_NAME = "List dev spaces for the current target";
 
-    public static void selectSpace(String spaceName, String repoPath) {
-        TaskRunner runner = new TaskRunner(AZDS_SELECT_SPACE_NAME, repoPath);
+    private TaskListener listener;
+
+    public AzdsTask(TaskListener listener) {
+        this.listener = listener;
+    }
+
+    public TaskResult selectSpace(String spaceName, String repoPath) throws AzureCliException {
+        TaskRunner runner = new TaskRunner(AZDS_SELECT_SPACE_NAME, repoPath, listener);
         try {
-            runner.run(String.format(AZDS_SELECT_SPACE_COMMAND, spaceName));
-            System.out.println(runner.getOutput());
+            return runner.run(String.format(AZDS_SELECT_SPACE_COMMAND, spaceName));
         } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            throw new AzureCliException(e);
         }
     }
 
-    public static void listSpace(String repoPath){
-        TaskRunner runner = new TaskRunner(AZDS_LIST_SPACE_NAME, repoPath);
+    public void listSpace(String repoPath) {
+        TaskRunner runner = new TaskRunner(AZDS_LIST_SPACE_NAME, repoPath, listener);
         try {
             runner.run(AZDS_LIST_SPACE_COMMAND);
-            String result = runner.getOutput();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    public static void prep(String repoPath) {
-        TaskRunner runner = new TaskRunner(AZDS_PREP_NAME, repoPath);
+    public TaskResult prep(String repoPath) throws AzureCliException {
+        TaskRunner runner = new TaskRunner(AZDS_PREP_NAME, repoPath, listener);
         try {
-            runner.run(AZDS_PREP_COMMAND);
-            System.out.println(runner.getOutput());
+            return runner.run(AZDS_PREP_COMMAND);
         } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            throw new AzureCliException(e);
         }
     }
 
-    public static void up(String repoPath) {
-        TaskRunner runner = new TaskRunner(AZDS_UP_NAME, repoPath);
+    public TaskResult up(String repoPath) throws AzureCliException {
+        TaskRunner runner = new TaskRunner(AZDS_UP_NAME, repoPath, listener);
         try {
-            runner.run(AZDS_UP_COMMAND);
-            System.out.println(runner.getOutput());
-            System.out.println(runner.getError());
+            return runner.run(AZDS_UP_COMMAND);
         } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            throw new AzureCliException(e);
         }
     }
 }
