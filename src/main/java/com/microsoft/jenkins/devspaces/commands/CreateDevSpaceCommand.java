@@ -3,7 +3,7 @@ package com.microsoft.jenkins.devspaces.commands;
 import com.microsoft.jenkins.azurecommons.command.CommandState;
 import com.microsoft.jenkins.azurecommons.command.IBaseCommandData;
 import com.microsoft.jenkins.azurecommons.command.ICommand;
-import hudson.EnvVars;
+import com.microsoft.jenkins.azurecommons.EnvironmentInjector;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.Configuration;
@@ -35,7 +35,7 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
             String parentSpaceName = context.getSharedSpaceName();
 
             String spacePrefix = String.format("%s.s", spaceName);
-            EnvVars.masterEnvVars.put(AZDS_SPACE_PREFIX, spacePrefix);
+            EnvironmentInjector.inject(context.getJobContext().getRun(), context.getEnvVars(), AZDS_SPACE_PREFIX, spacePrefix);
             context.logStatus(String.format("bind environment variable %s with %s", AZDS_SPACE_PREFIX, spacePrefix));
 
             V1Namespace namespace = null;

@@ -18,6 +18,7 @@ import hudson.EnvVars;
 import hudson.model.Item;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+import io.grpc.StatusRuntimeException;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.Configuration;
@@ -41,6 +42,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.IDeployHelmChartData> {
     @Override
@@ -76,8 +79,6 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
 
                 createOrReplaceSecrets(secretNamespace, secretName, dockerRegistryEndpoints, context.getKubeconfig());
 
-//                envVars.put(Constants.KUBERNETES_SECRET_NAME_PROP, secretName);
-//                result.extraEnvVars.put(Constants.KUBERNETES_SECRET_NAME_PROP, secretName);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -118,6 +119,8 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
             helmContext.setTimeout(300);
             helmContext.setRawValue(yamlString);
 
+            context.logStatus(helmChartLocation);
+
             createOrUpdateHelm(releaseManager, helmContext);
 
             context.setCommandState(CommandState.Success);
@@ -136,7 +139,22 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
         if (isHelmReleaseExist(releaseManager, helmContext)) {
             updateHelmRelease(releaseManager, helmContext);
         } else {
-            installHelmRelease(releaseManager, helmContext);
+            try {
+                installHelmRelease(releaseManager, helmContext);
+                try {
+                    Thread.sleep(120000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                updateHelmRelease(releaseManager, helmContext);
+            } catch (ExecutionException e) {
+                String message = e.getMessage();
+                if (message.contains("already exists")) {
+                    updateHelmRelease(releaseManager, helmContext);
+                } else {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -148,15 +166,25 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
             ListReleasesResponse response = responses.next();
             List<ReleaseOuterClass.Release> releasesList = response.getReleasesList();
             for (ReleaseOuterClass.Release release : releasesList) {
+                System.out.println("release name " + release.getName());
                 if (helmContext.getReleaseName().equals(release.getName())) {
                     return true;
                 }
             }
         }
+//        boolean isExist = false;
+//        try {
+//            isExist = responses.hasNext();
+//            System.out.println("has release " + helmContext.getReleaseName() + " " + isExist);
+//        } catch (StatusRuntimeException e) {
+//            System.out.println("==================");
+//            System.out.println(e.getTrailers().toString());
+//        }
+//        return isExist;
         return false;
     }
 
-    private void installHelmRelease(ReleaseManager releaseManager, HelmContext helmContext) {
+    private void installHelmRelease(ReleaseManager releaseManager, HelmContext helmContext) throws ExecutionException {
         final InstallReleaseRequest.Builder requestBuilder = InstallReleaseRequest.newBuilder();
         requestBuilder.setNamespace(helmContext.getNamespace());
         requestBuilder.setTimeout(helmContext.getTimeout());
@@ -165,11 +193,13 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
         requestBuilder.setWait(true); // Wait for Pods to be ready
 
         try {
-            releaseManager.install(requestBuilder, helmContext.getChart());
-        } catch (IOException e) {
+            Future<hapi.services.tiller.Tiller.InstallReleaseResponse> install = releaseManager.install(requestBuilder, helmContext.getChart());
+            hapi.services.tiller.Tiller.InstallReleaseResponse installReleaseResponse = install.get();
+            ReleaseOuterClass.Release release = installReleaseResponse.getRelease();
+            assert release != null;
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
-
     }
 
     private void updateHelmRelease(ReleaseManager releaseManager, HelmContext helmContext) {
@@ -178,11 +208,16 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
         builder.setName(helmContext.getReleaseName());
         builder.setTimeout(helmContext.getTimeout());
         builder.getValuesBuilder().setRaw(helmContext.getRawValue());
+        builder.setRecreate(true);
+        builder.setForce(true);
         builder.setWait(true);
 
         try {
-            releaseManager.update(builder, helmContext.getChart());
-        } catch (IOException e) {
+            Future<hapi.services.tiller.Tiller.UpdateReleaseResponse> update = releaseManager.update(builder, helmContext.getChart());
+            hapi.services.tiller.Tiller.UpdateReleaseResponse updateReleaseResponse = update.get();
+            ReleaseOuterClass.Release release = updateReleaseResponse.getRelease();
+            assert release != null;
+        } catch (IOException | InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
     }
@@ -216,15 +251,24 @@ public class DeployHelmChartCommand implements ICommand<DeployHelmChartCommand.I
         ApiClient client = io.kubernetes.client.util.Config.fromConfig(reader);
         Configuration.setDefaultApiClient(client);
         CoreV1Api coreV1Api = new CoreV1Api();
+        V1Secret secret1 = null;
         try {
-            V1Secret secret1 = coreV1Api.readNamespacedSecret(secretName, kubernetesNamespace, "ture", false, false);
+            secret1 = coreV1Api.readNamespacedSecret(secretName, kubernetesNamespace, "ture", false, false);
+        } catch (ApiException e1) {
+            int code = e1.getCode();
+            if (code == 404) {
+                //ignore
+            }
+            System.out.println(e1.toString());
+        }
+        try {
             if (secret1 == null) {
                 coreV1Api.createNamespacedSecret(kubernetesNamespace, secret, "false");
             } else {
                 coreV1Api.replaceNamespacedSecret(secretName, kubernetesNamespace, secret, "false");
             }
         } catch (ApiException e) {
-            e.printStackTrace();
+            System.out.println(e.toString());
         }
     }
 
