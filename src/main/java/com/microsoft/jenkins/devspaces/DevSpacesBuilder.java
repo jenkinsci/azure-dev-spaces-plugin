@@ -5,8 +5,6 @@
 
 package com.microsoft.jenkins.devspaces;
 
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.microsoft.azure.PagedList;
@@ -36,7 +34,6 @@ import hudson.util.ListBoxModel;
 import jenkins.tasks.SimpleBuildStep;
 import org.apache.commons.lang3.StringUtils;
 import org.jenkinsci.Symbol;
-import org.jenkinsci.plugins.docker.commons.credentials.DockerRegistryEndpoint;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -44,9 +41,6 @@ import org.kohsuke.stapler.QueryParameter;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
     private String azureCredentialsId;
@@ -55,28 +49,13 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
     @DataBoundSetter
     private String resourceGroupName;
     @DataBoundSetter
-    private String repoPath;
-    @DataBoundSetter
     private String spaceName;
     @DataBoundSetter
-    private String userCredentialsId;
-    @DataBoundSetter
     private String sharedSpaceName;
-    @DataBoundSetter
-    private String helmChartLocation;
-    @DataBoundSetter
-    private String imageRepository;
-    @DataBoundSetter
-    private String imageTag;
     @DataBoundSetter
     private String endpointVariable;
     @DataBoundSetter
     private String kubeconfigId;
-    @DataBoundSetter
-    private String secretNamespace;
-    @DataBoundSetter
-    private String secretName;
-    private List<DockerRegistryEndpoint> dockerCredentials;
 
     @DataBoundConstructor
     public DevSpacesBuilder(String azureCredentialsId) {
@@ -87,23 +66,10 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
     public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
         DevSpacesBuilderContext commandContext = new DevSpacesBuilderContext();
 
-        this.repoPath = StringUtils.isBlank(repoPath) ? workspace.getRemote() : workspace.child(repoPath).getRemote();
-        commandContext.setRepoPath(this.repoPath);
         commandContext.setSpaceName(this.spaceName);
         commandContext.setSharedSpaceName(this.sharedSpaceName);
-        commandContext.setAksName(this.aksName);
-        commandContext.setResourceGroupName(this.resourceGroupName);
-        commandContext.setUserCredentialsId(this.userCredentialsId);
         commandContext.setNamespace(this.spaceName);
-        commandContext.setImageRepository(this.imageRepository);
-        commandContext.setImageTag(this.imageTag);
         commandContext.setEndpointVariable(this.endpointVariable);
-//        this.helmChartLocation = StringUtils.isBlank(helmChartLocation) ? workspace.getRemote() : workspace.child(helmChartLocation).getRemote();
-//        commandContext.setHelmChartLocation(this.helmChartLocation);
-
-        commandContext.setSecretName(this.secretName);
-        commandContext.setSecretNamespace(this.secretNamespace);
-        commandContext.setDockerCredentials(this.dockerCredentials);
 
         String configContent = Util.getConfigContent(run.getParent(), getKubeconfigId());
         commandContext.setKubeconfig(configContent);
@@ -223,32 +189,12 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
         return resourceGroupName;
     }
 
-    public String getRepoPath() {
-        return repoPath;
-    }
-
     public String getSpaceName() {
         return spaceName;
     }
 
-    public String getUserCredentialsId() {
-        return userCredentialsId;
-    }
-
     public String getSharedSpaceName() {
         return sharedSpaceName;
-    }
-
-    public String getHelmChartLocation() {
-        return helmChartLocation;
-    }
-
-    public String getImageRepository() {
-        return imageRepository;
-    }
-
-    public String getImageTag() {
-        return imageTag;
     }
 
     public String getEndpointVariable() {
@@ -257,41 +203,5 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
 
     public String getKubeconfigId() {
         return kubeconfigId;
-    }
-
-    public String getSecretNamespace() {
-        return secretNamespace;
-    }
-
-    public String getSecretName() {
-        return secretName;
-    }
-
-    public List<DockerRegistryEndpoint> getDockerCredentials() {
-        return dockerCredentials;
-    }
-
-    @DataBoundSetter
-    public void setDockerCredentials(List<DockerRegistryEndpoint> dockerCredentials) {
-        List<DockerRegistryEndpoint> endpoints = new ArrayList<>();
-        for (DockerRegistryEndpoint endpoint : dockerCredentials) {
-            String credentialsId = org.apache.commons.lang.StringUtils.trimToNull(endpoint.getCredentialsId());
-            if (credentialsId == null) {
-                // no credentials item is selected, skip this endpoint
-                continue;
-            }
-
-            String registryUrl = org.apache.commons.lang.StringUtils.trimToNull(endpoint.getUrl());
-            // null URL results in "https://index.docker.io/v1/" effectively
-            if (registryUrl != null) {
-                // It's common that the user omits the scheme prefix, we add http:// as default.
-                // Otherwise it will cause MalformedURLException when we call endpoint.getEffectiveURL();
-                if (!com.microsoft.jenkins.kubernetes.util.Constants.URI_SCHEME_PREFIX.matcher(registryUrl).find()) {
-                    registryUrl = "http://" + registryUrl;
-                }
-            }
-            endpoints.add(new DockerRegistryEndpoint(registryUrl, credentialsId));
-        }
-        this.dockerCredentials = endpoints;
     }
 }
