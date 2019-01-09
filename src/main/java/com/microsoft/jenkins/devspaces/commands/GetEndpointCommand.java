@@ -3,7 +3,7 @@ package com.microsoft.jenkins.devspaces.commands;
 import com.microsoft.jenkins.azurecommons.command.CommandState;
 import com.microsoft.jenkins.azurecommons.command.IBaseCommandData;
 import com.microsoft.jenkins.azurecommons.command.ICommand;
-import hudson.EnvVars;
+import com.microsoft.jenkins.azurecommons.EnvironmentInjector;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.Configuration;
@@ -40,7 +40,7 @@ public class GetEndpointCommand implements ICommand<GetEndpointCommand.IGetEndpo
                 for (V1beta1IngressRule rule : rules) {
                     String host = rule.getHost();
                     if (host.startsWith(String.format(ENDPOINT_PREFIX_PATTERN, namespace))) {
-                        EnvVars.masterEnvVars.put(endpointVariable, host);
+                        EnvironmentInjector.inject(context.getJobContext().getRun(), context.getEnvVars(), endpointVariable, host);
                         context.logStatus(String.format("bind environment variable %s with %s", endpointVariable, host));
                     }
                 }

@@ -19,16 +19,20 @@ import hudson.Launcher;
 import hudson.model.Item;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import io.kubernetes.client.ApiClient;
+import io.kubernetes.client.Configuration;
+import io.kubernetes.client.util.Config;
 import org.jenkinsci.plugins.docker.commons.credentials.DockerRegistryEndpoint;
 import org.jenkinsci.plugins.docker.commons.credentials.DockerRegistryToken;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DevSpacesContext extends BaseCommandContext
+public class DevSpacesBuilderContext extends BaseCommandContext
         implements AzdsCommand.IAzdsData,
         CreateDevSpaceCommand.ICreateDevSpaceData,
         DeployHelmChartCommand.IDeployHelmChartData,
@@ -56,12 +60,20 @@ public class DevSpacesContext extends BaseCommandContext
                              Launcher launcher,
                              TaskListener taskListener) {
 
-        CommandService.Builder builder = CommandService.builder();
-//        builder.withStartCommand(AzdsCommand.class);
+        // Set up kubernetes client configuration
+        StringReader reader = new StringReader(getKubeconfig());
+        ApiClient client = null;
+        try {
+            client = Config.fromConfig(reader);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Configuration.setDefaultApiClient(client);
 
+        CommandService.Builder builder = CommandService.builder();
         builder.withStartCommand(CreateDevSpaceCommand.class);
-        builder.withTransition(CreateDevSpaceCommand.class, DeployHelmChartCommand.class);
-        builder.withTransition(DeployHelmChartCommand.class, GetEndpointCommand.class);
+//        builder.withTransition(CreateDevSpaceCommand.class, DeployHelmChartCommand.class);
+//        builder.withTransition(DeployHelmChartCommand.class, GetEndpointCommand.class);
 
         super.configure(run, workspace, launcher, taskListener, builder.build());
     }

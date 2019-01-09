@@ -53,4 +53,15 @@ public class HelmContext {
     public void setTimeout(long timeout) {
         this.timeout = timeout;
     }
+
+    @Override
+    public String toString() {
+        return "HelmContext{" +
+                "namespace='" + namespace + '\'' +
+                ", releaseName='" + releaseName + '\'' +
+                ", chart=" + chart +
+                ", rawValue='" + rawValue + '\'' +
+                ", timeout=" + timeout +
+                '}';
+    }
 }

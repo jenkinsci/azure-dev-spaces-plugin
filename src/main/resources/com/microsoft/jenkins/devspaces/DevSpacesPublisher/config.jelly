@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) Microsoft Corporation. All rights reserved.
+  ~ Licensed under the MIT License. See License.txt in the project root for
+  ~ license information.
+  -->
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:c="/lib/credentials"
+         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <f:entry title="${%azureCredentialsId_title}" field="azureCredentialsId">
+        <c:select expressionAllowed="false"/>
+    </f:entry>
+    <f:entry title="${%resourceGroupName_title}" field="resourceGroupName">
+        <f:select/>
+    </f:entry>
+    <f:entry title="${%aks_title}" field="aksName">
+        <f:select/>
+    </f:entry>
+    <f:entry title="${%spaceName_title}" field="devSpaceName">
+        <f:textbox/>
+    </f:entry>
+    <f:entry title="${%kubeconfigId_title}" field="kubeConfigId">
+        <c:select expressionAllowed="false" />
+    </f:entry>
+</j:jelly>
