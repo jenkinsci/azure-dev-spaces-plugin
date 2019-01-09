@@ -23,14 +23,24 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
     private static final String AZDS_PARENT_SPACE_LABEL = "azds.io/parent-space";
     private static final String TRUE = "true";
     private static final String AZDS_SPACE_PREFIX = "azdsspace";
+    private static final String AZDS_NAMESPACE = "azds";
+
+    private CoreV1Api api = new CoreV1Api();
 
     @Override
     public void execute(ICreateDevSpaceData context) {
         try {
+            boolean devSpacesEnabled = isClusterDevSpacesEnabled();
+            if (!devSpacesEnabled) {
+                context.setCommandState(CommandState.HasError);
+                context.logError("The current cluster has not enabled Azure Dev Spaces, please check it.");
+                return;
+            }
+
+
             StringReader reader = new StringReader(context.getKubeconfig());
             ApiClient client = Config.fromConfig(reader);
             Configuration.setDefaultApiClient(client);
-            CoreV1Api api = new CoreV1Api();
             String spaceName = context.getSpaceName();
             String parentSpaceName = context.getSharedSpaceName();
 
@@ -56,6 +66,12 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
                 return;
             }
 
+            boolean namespaceDevSpaceEnabled = isNamespaceDevSpaceEnabled(parentSpaceName);
+            if (!namespaceDevSpaceEnabled) {
+                context.logError("It seems that your parent dev space "+parentSpaceName+" has not set up dev space, please check it.");
+                context.setCommandState(CommandState.HasError);
+                return;
+            }
             Map<String, String> labels = new HashMap<>();
             labels.put(AZDS_ENABLE_LABEL, TRUE);
             labels.put(AZDS_PARENT_SPACE_LABEL, parentSpaceName);
@@ -73,6 +89,47 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
             context.logError(e);
             context.setCommandState(CommandState.HasError);
         }
+    }
+
+    /**
+     * Check whether a cluster is Dev Spaces enabled by finding out whether there is a azds namespace.
+     *
+     * @return true if the cluster is Dev Spaces enabled.
+     */
+    private boolean isClusterDevSpacesEnabled() {
+        try {
+            V1Namespace namespace = api.readNamespace(AZDS_NAMESPACE, "true", false, false);
+            return namespace != null;
+        } catch (ApiException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Check whether a namespace is Dev Spaces enabled by finding out  whether there is label azds.io/space set true.
+     *
+     * @param namespace namespace needs to be checked
+     * @return true if the namespace is Dev Spaces enabled
+     */
+    private boolean isNamespaceDevSpaceEnabled(String namespace) {
+        try {
+            V1Namespace v1Namespace = api.readNamespace(namespace, "true", false, false);
+            if (v1Namespace == null) {
+                return false;
+            }
+
+            V1ObjectMeta metadata = v1Namespace.getMetadata();
+            Map<String, String> labels = metadata.getLabels();
+            if (labels == null) {
+                return false;
+            }
+            return TRUE.equals(labels.get(AZDS_ENABLE_LABEL));
+        } catch (ApiException e) {
+            e.printStackTrace();
+            return false;
+        }
+
     }
 
     public interface ICreateDevSpaceData extends IBaseCommandData {
