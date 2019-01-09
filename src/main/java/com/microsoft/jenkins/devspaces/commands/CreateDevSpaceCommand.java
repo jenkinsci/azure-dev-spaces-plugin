@@ -1,20 +1,15 @@
 package com.microsoft.jenkins.devspaces.commands;
 
+import com.microsoft.jenkins.azurecommons.EnvironmentInjector;
 import com.microsoft.jenkins.azurecommons.command.CommandState;
 import com.microsoft.jenkins.azurecommons.command.IBaseCommandData;
 import com.microsoft.jenkins.azurecommons.command.ICommand;
-import com.microsoft.jenkins.azurecommons.EnvironmentInjector;
-import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.ApiException;
-import io.kubernetes.client.Configuration;
 import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.models.V1Namespace;
 import io.kubernetes.client.models.V1NamespaceBuilder;
 import io.kubernetes.client.models.V1ObjectMeta;
-import io.kubernetes.client.util.Config;
 
-import java.io.IOException;
-import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,6 +25,7 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
     @Override
     public void execute(ICreateDevSpaceData context) {
         try {
+
             boolean devSpacesEnabled = isClusterDevSpacesEnabled();
             if (!devSpacesEnabled) {
                 context.setCommandState(CommandState.HasError);
@@ -38,9 +34,6 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
             }
 
 
-            StringReader reader = new StringReader(context.getKubeconfig());
-            ApiClient client = Config.fromConfig(reader);
-            Configuration.setDefaultApiClient(client);
             String spaceName = context.getSpaceName();
             String parentSpaceName = context.getSharedSpaceName();
 
@@ -85,7 +78,7 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
             V1Namespace createdNamespace = api.createNamespace(namespace, "true");
             context.logStatus(createdNamespace.toString());
             context.setCommandState(CommandState.Success);
-        } catch (IOException | ApiException e) {
+        } catch (ApiException e) {
             context.logError(e);
             context.setCommandState(CommandState.HasError);
         }

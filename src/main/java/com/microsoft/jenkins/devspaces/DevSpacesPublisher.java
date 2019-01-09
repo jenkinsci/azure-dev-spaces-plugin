@@ -1,12 +1,5 @@
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for license information.
- */
-
 package com.microsoft.jenkins.devspaces;
 
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.microsoft.azure.PagedList;
@@ -31,12 +24,13 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.Builder;
+import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Publisher;
+import hudson.tasks.Recorder;
 import hudson.util.ListBoxModel;
 import jenkins.tasks.SimpleBuildStep;
 import org.apache.commons.lang3.StringUtils;
 import org.jenkinsci.Symbol;
-import org.jenkinsci.plugins.docker.commons.credentials.DockerRegistryEndpoint;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -44,99 +38,68 @@ import org.kohsuke.stapler.QueryParameter;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
-public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
+public class DevSpacesPublisher extends Recorder implements SimpleBuildStep {
     private String azureCredentialsId;
     @DataBoundSetter
     private String aksName;
     @DataBoundSetter
     private String resourceGroupName;
     @DataBoundSetter
-    private String repoPath;
+    private String devSpaceName;
     @DataBoundSetter
-    private String spaceName;
-    @DataBoundSetter
-    private String userCredentialsId;
-    @DataBoundSetter
-    private String sharedSpaceName;
-    @DataBoundSetter
-    private String helmChartLocation;
-    @DataBoundSetter
-    private String imageRepository;
-    @DataBoundSetter
-    private String imageTag;
-    @DataBoundSetter
-    private String endpointVariable;
-    @DataBoundSetter
-    private String kubeconfigId;
-    @DataBoundSetter
-    private String secretNamespace;
-    @DataBoundSetter
-    private String secretName;
-    private List<DockerRegistryEndpoint> dockerCredentials;
+    private String kubeConfigId;
 
     @DataBoundConstructor
-    public DevSpacesBuilder(String azureCredentialsId) {
+    public DevSpacesPublisher(String azureCredentialsId) {
         this.azureCredentialsId = azureCredentialsId;
     }
 
     @Override
     public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
-        DevSpacesBuilderContext commandContext = new DevSpacesBuilderContext();
+        DevSpacesPublisherContext context = new DevSpacesPublisherContext();
+        context.setAksName(this.aksName);
+        context.setResourceGroupName(this.resourceGroupName);
+        context.setSpaceName(this.devSpaceName);
 
-        this.repoPath = StringUtils.isBlank(repoPath) ? workspace.getRemote() : workspace.child(repoPath).getRemote();
-        commandContext.setRepoPath(this.repoPath);
-        commandContext.setSpaceName(this.spaceName);
-        commandContext.setSharedSpaceName(this.sharedSpaceName);
-        commandContext.setAksName(this.aksName);
-        commandContext.setResourceGroupName(this.resourceGroupName);
-        commandContext.setUserCredentialsId(this.userCredentialsId);
-        commandContext.setNamespace(this.spaceName);
-        commandContext.setImageRepository(this.imageRepository);
-        commandContext.setImageTag(this.imageTag);
-        commandContext.setEndpointVariable(this.endpointVariable);
-//        this.helmChartLocation = StringUtils.isBlank(helmChartLocation) ? workspace.getRemote() : workspace.child(helmChartLocation).getRemote();
-//        commandContext.setHelmChartLocation(this.helmChartLocation);
+        String configContent = Util.getConfigContent(run.getParent(), getKubeConfigId());
+        context.setKubeConfig(configContent);
 
-        commandContext.setSecretName(this.secretName);
-        commandContext.setSecretNamespace(this.secretNamespace);
-        commandContext.setDockerCredentials(this.dockerCredentials);
+        context.configure(run, workspace, launcher, listener);
+        context.executeCommands();
 
-        String configContent = Util.getConfigContent(run.getParent(), getKubeconfigId());
-        commandContext.setKubeconfig(configContent);
-
-        commandContext.configure(run, workspace, launcher, listener);
-
-        commandContext.executeCommands();
-        CommandState commandState = commandContext.getCommandState();
+        CommandState commandState = context.getCommandState();
         if (commandState != CommandState.Success) {
             run.setResult(Result.FAILURE);
         }
     }
 
+    @Override
+    public BuildStepMonitor getRequiredMonitorService() {
+        return BuildStepMonitor.NONE;
+    }
 
     @Override
-    public final DescriptorImpl getDescriptor() {
+    public final DevSpacesBuilderDes getDescriptor() {
         // see Descriptor javadoc for more about what a descriptor is.
-        return (DescriptorImpl) super.getDescriptor();
+        return (DevSpacesBuilderDes) super.getDescriptor();
     }
 
     @Extension
-    @Symbol("devSpacesCreate")
-    public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
+    @Symbol("devSpacesCleanup")
+    public static final class DevSpacesBuilderDes extends BuildStepDescriptor<Publisher> {
 
         @Override
         public boolean isApplicable(Class<? extends AbstractProject> jobType) {
             return true;
         }
 
+
+        // TODO common share
         @Nonnull
         @Override
         public String getDisplayName() {
-            return "Create dev spaces";
+            return "Cleanup dev spaces";
         }
 
         public ListBoxModel doFillAzureCredentialsIdItems(@AncestorInPath Item owner) {
@@ -146,7 +109,7 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
             return model;
         }
 
-        public ListBoxModel doFillKubeconfigIdItems(@AncestorInPath Item owner) {
+        public ListBoxModel doFillKubeConfigIdItems(@AncestorInPath Item owner) {
             StandardListBoxModel model = new StandardListBoxModel();
             model.includeEmptyValue();
             model.includeAs(ACL.SYSTEM, owner, KubeconfigCredentials.class);
@@ -223,75 +186,11 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
         return resourceGroupName;
     }
 
-    public String getRepoPath() {
-        return repoPath;
+    public String getDevSpaceName() {
+        return devSpaceName;
     }
 
-    public String getSpaceName() {
-        return spaceName;
-    }
-
-    public String getUserCredentialsId() {
-        return userCredentialsId;
-    }
-
-    public String getSharedSpaceName() {
-        return sharedSpaceName;
-    }
-
-    public String getHelmChartLocation() {
-        return helmChartLocation;
-    }
-
-    public String getImageRepository() {
-        return imageRepository;
-    }
-
-    public String getImageTag() {
-        return imageTag;
-    }
-
-    public String getEndpointVariable() {
-        return endpointVariable;
-    }
-
-    public String getKubeconfigId() {
-        return kubeconfigId;
-    }
-
-    public String getSecretNamespace() {
-        return secretNamespace;
-    }
-
-    public String getSecretName() {
-        return secretName;
-    }
-
-    public List<DockerRegistryEndpoint> getDockerCredentials() {
-        return dockerCredentials;
-    }
-
-    @DataBoundSetter
-    public void setDockerCredentials(List<DockerRegistryEndpoint> dockerCredentials) {
-        List<DockerRegistryEndpoint> endpoints = new ArrayList<>();
-        for (DockerRegistryEndpoint endpoint : dockerCredentials) {
-            String credentialsId = org.apache.commons.lang.StringUtils.trimToNull(endpoint.getCredentialsId());
-            if (credentialsId == null) {
-                // no credentials item is selected, skip this endpoint
-                continue;
-            }
-
-            String registryUrl = org.apache.commons.lang.StringUtils.trimToNull(endpoint.getUrl());
-            // null URL results in "https://index.docker.io/v1/" effectively
-            if (registryUrl != null) {
-                // It's common that the user omits the scheme prefix, we add http:// as default.
-                // Otherwise it will cause MalformedURLException when we call endpoint.getEffectiveURL();
-                if (!com.microsoft.jenkins.kubernetes.util.Constants.URI_SCHEME_PREFIX.matcher(registryUrl).find()) {
-                    registryUrl = "http://" + registryUrl;
-                }
-            }
-            endpoints.add(new DockerRegistryEndpoint(registryUrl, credentialsId));
-        }
-        this.dockerCredentials = endpoints;
+    public String getKubeConfigId() {
+        return kubeConfigId;
     }
 }
