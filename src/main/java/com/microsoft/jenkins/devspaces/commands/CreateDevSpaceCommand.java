@@ -17,7 +17,7 @@ public class CreateDevSpaceCommand implements ICommand<CreateDevSpaceCommand.ICr
     private static final String AZDS_ENABLE_LABEL = "azds.io/space";
     private static final String AZDS_PARENT_SPACE_LABEL = "azds.io/parent-space";
     private static final String TRUE = "true";
-    private static final String AZDS_SPACE_PREFIX = "azdsspace";
+    private static final String AZDS_SPACE_PREFIX = "azdsprefix";
     private static final String AZDS_NAMESPACE = "azds";
 
     private CoreV1Api api = new CoreV1Api();

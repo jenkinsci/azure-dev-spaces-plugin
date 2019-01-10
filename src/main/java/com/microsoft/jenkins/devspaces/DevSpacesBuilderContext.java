@@ -30,7 +30,6 @@ public class DevSpacesBuilderContext extends BaseCommandContext
     private String spaceName;
     private String sharedSpaceName;
     private String namespace;
-    private String endpointVariable;
     private String kubeconfig;
 
 
@@ -86,11 +85,6 @@ public class DevSpacesBuilderContext extends BaseCommandContext
         return this.namespace;
     }
 
-    @Override
-    public String getEndpointVariable() {
-        return endpointVariable;
-    }
-
     public void setSpaceName(String spaceName) {
         this.spaceName = spaceName;
     }
@@ -101,10 +95,6 @@ public class DevSpacesBuilderContext extends BaseCommandContext
 
     public void setNamespace(String namespace) {
         this.namespace = namespace;
-    }
-
-    public void setEndpointVariable(String endpointVariable) {
-        this.endpointVariable = endpointVariable;
     }
 
     public void setKubeconfig(String kubeconfig) {

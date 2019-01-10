@@ -166,12 +166,6 @@ public class DevSpacesPublisher extends Recorder implements SimpleBuildStep {
             return model;
         }
 
-        public ListBoxModel doFillUserCredentialsIdItems(@AncestorInPath final Item owner) {
-            StandardListBoxModel model = new StandardListBoxModel();
-            model.add("test", Constants.INVALID_OPTION);
-            model.includeAs(ACL.SYSTEM, owner, StandardUsernamePasswordCredentials.class);
-            return model;
-        }
     }
 
     public String getAzureCredentialsId() {

@@ -6,25 +6,22 @@
   -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:c="/lib/credentials" xmlns:f="/lib/form" xmlns:st="jelly:stapler">
-    <f:entry title="${%azureCredentialsId_title}" field="azureCredentialsId">
+    <f:entry title="${%azureCredentialsId_title}" field="azureCredentialsId" help="/plugin/azure-dev-spaces/help-azureCredentialsId.html">
         <c:select expressionAllowed="false"/>
     </f:entry>
-    <f:entry title="${%resourceGroupName_title}" field="resourceGroupName">
+    <f:entry title="${%resourceGroupName_title}" field="resourceGroupName" help="/plugin/azure-dev-spaces/help-resourceGroupName.html">
         <f:select/>
     </f:entry>
-    <f:entry title="${%aks_title}" field="aksName">
+    <f:entry title="${%aks_title}" field="aksName" help="/plugin/azure-dev-spaces/help-aksName.html">
         <f:select/>
     </f:entry>
     <f:entry title="${%sharedSpaceName_title}" field="sharedSpaceName">
         <f:textbox/>
     </f:entry>
-    <f:entry title="${%spaceName_title}" field="spaceName">
+    <f:entry title="${%spaceName_title}" field="spaceName" help="/plugin/azure-dev-spaces/help-spaceName.html">
         <f:textbox/>
     </f:entry>
-    <f:entry title="${%kubeconfigId_title}" field="kubeconfigId">
+    <f:entry title="${%kubeconfigId_title}" field="kubeconfigId" help="/plugin/azure-dev-spaces/help-kubeconfigId.html">
         <c:select expressionAllowed="false" />
-    </f:entry>
-    <f:entry title="${%endpointVariable_title}" field="endpointVariable">
-        <f:textbox/>
     </f:entry>
 </j:jelly>

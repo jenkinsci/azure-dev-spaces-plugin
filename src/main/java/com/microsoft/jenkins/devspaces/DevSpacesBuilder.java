@@ -53,8 +53,6 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
     @DataBoundSetter
     private String sharedSpaceName;
     @DataBoundSetter
-    private String endpointVariable;
-    @DataBoundSetter
     private String kubeconfigId;
 
     @DataBoundConstructor
@@ -69,7 +67,6 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
         commandContext.setSpaceName(this.spaceName);
         commandContext.setSharedSpaceName(this.sharedSpaceName);
         commandContext.setNamespace(this.spaceName);
-        commandContext.setEndpointVariable(this.endpointVariable);
 
         String configContent = Util.getConfigContent(run.getParent(), getKubeconfigId());
         commandContext.setKubeconfig(configContent);
@@ -168,13 +165,6 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
             }
             return model;
         }
-
-        public ListBoxModel doFillUserCredentialsIdItems(@AncestorInPath final Item owner) {
-            StandardListBoxModel model = new StandardListBoxModel();
-            model.add("test", Constants.INVALID_OPTION);
-            model.includeAs(ACL.SYSTEM, owner, StandardUsernamePasswordCredentials.class);
-            return model;
-        }
     }
 
     public String getAzureCredentialsId() {
@@ -195,10 +185,6 @@ public class DevSpacesBuilder extends Builder implements SimpleBuildStep {
 
     public String getSharedSpaceName() {
         return sharedSpaceName;
-    }
-
-    public String getEndpointVariable() {
-        return endpointVariable;
     }
 
     public String getKubeconfigId() {

@@ -34,7 +34,7 @@ public class GetEndpointCommand implements ICommand<GetEndpointCommand.IGetEndpo
             String namespace = context.getNamespace();
             V1beta1IngressList ingressList = extensionsV1beta1Api.listNamespacedIngress(namespace, "true", null, null, null, null, null, null, null, null);
             List<V1beta1Ingress> items = ingressList.getItems();
-            String endpointVariable = StringUtils.defaultIfBlank(context.getEndpointVariable(), DEFAULT_ENDPOINT_VARIABLE);
+            String endpointVariable = DEFAULT_ENDPOINT_VARIABLE;
             for (V1beta1Ingress item : items) {
                 List<V1beta1IngressRule> rules = item.getSpec().getRules();
                 for (V1beta1IngressRule rule : rules) {
@@ -54,8 +54,6 @@ public class GetEndpointCommand implements ICommand<GetEndpointCommand.IGetEndpo
 
     public interface IGetEndpointData extends IBaseCommandData {
         String getNamespace();
-
-        String getEndpointVariable();
 
         String getKubeconfig();
     }
