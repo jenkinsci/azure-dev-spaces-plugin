@@ -1,7 +1,6 @@
 package com.microsoft.jenkins.devspaces;
 
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.microsoft.azure.PagedList;
 import com.microsoft.azure.management.Azure;
 import com.microsoft.azure.management.compute.ContainerService;
@@ -49,6 +48,12 @@ public class DevSpacesPublisher extends Recorder implements SimpleBuildStep {
     private String devSpaceName;
     @DataBoundSetter
     private String kubeConfigId;
+    @DataBoundSetter
+    private String helmReleaseName;
+    @DataBoundSetter
+    private String helmTillerNamespace;
+    @DataBoundSetter
+    private int helmTimeout;
 
     @DataBoundConstructor
     public DevSpacesPublisher(String azureCredentialsId) {
@@ -58,12 +63,13 @@ public class DevSpacesPublisher extends Recorder implements SimpleBuildStep {
     @Override
     public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
         DevSpacesPublisherContext context = new DevSpacesPublisherContext();
-        context.setAksName(this.aksName);
-        context.setResourceGroupName(this.resourceGroupName);
         context.setSpaceName(this.devSpaceName);
+        context.setHelmReleaseName(this.helmReleaseName);
+        context.setHelmTillerNamespace(this.helmTillerNamespace);
+        context.setHelmTimeout(this.helmTimeout);
 
         String configContent = Util.getConfigContent(run.getParent(), getKubeConfigId());
-        context.setKubeConfig(configContent);
+        context.setKubeconfig(configContent);
 
         context.configure(run, workspace, launcher, listener);
         context.executeCommands();
@@ -81,7 +87,6 @@ public class DevSpacesPublisher extends Recorder implements SimpleBuildStep {
 
     @Override
     public final DevSpacesBuilderDes getDescriptor() {
-        // see Descriptor javadoc for more about what a descriptor is.
         return (DevSpacesBuilderDes) super.getDescriptor();
     }
 
@@ -186,5 +191,17 @@ public class DevSpacesPublisher extends Recorder implements SimpleBuildStep {
 
     public String getKubeConfigId() {
         return kubeConfigId;
+    }
+
+    public String getHelmReleaseName() {
+        return helmReleaseName;
+    }
+
+    public String getHelmTillerNamespace() {
+        return helmTillerNamespace;
+    }
+
+    public int getHelmTimeout() {
+        return helmTimeout;
     }
 }
