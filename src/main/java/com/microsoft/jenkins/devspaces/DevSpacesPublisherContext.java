@@ -21,9 +21,10 @@ import java.io.StringReader;
 public class DevSpacesPublisherContext extends BaseCommandContext
         implements CleanupDevSpaceCommand.ICleanupDevSpaceData {
     private String spaceName;
-    private String aksName;
-    private String resourceGroupName;
-    private String kubeConfig;
+    private String kubeconfig;
+    private String helmReleaseName;
+    private String helmTillerNamespace;
+    private int helmTimeout;
 
     protected void configure(Run<?, ?> run,
                              FilePath workspace,
@@ -31,7 +32,7 @@ public class DevSpacesPublisherContext extends BaseCommandContext
                              TaskListener taskListener) {
 
         // Set up kubernetes client configuration
-        StringReader reader = new StringReader(getKubeConfig());
+        StringReader reader = new StringReader(getKubeconfig());
         ApiClient client = null;
         try {
             client = Config.fromConfig(reader);
@@ -60,16 +61,20 @@ public class DevSpacesPublisherContext extends BaseCommandContext
         this.spaceName = spaceName;
     }
 
-    public void setAksName(String aksName) {
-        this.aksName = aksName;
+    public void setKubeconfig(String kubeconfig) {
+        this.kubeconfig = kubeconfig;
     }
 
-    public void setResourceGroupName(String resourceGroupName) {
-        this.resourceGroupName = resourceGroupName;
+    public void setHelmReleaseName(String helmReleaseName) {
+        this.helmReleaseName = helmReleaseName;
     }
 
-    public void setKubeConfig(String kubeConfig) {
-        this.kubeConfig = kubeConfig;
+    public void setHelmTillerNamespace(String helmTillerNamespace) {
+        this.helmTillerNamespace = helmTillerNamespace;
+    }
+
+    public void setHelmTimeout(int helmTimeout) {
+        this.helmTimeout = helmTimeout;
     }
 
     @Override
@@ -78,16 +83,22 @@ public class DevSpacesPublisherContext extends BaseCommandContext
     }
 
     @Override
-    public String getResourceGroupName() {
-        return this.resourceGroupName;
+    public String getKubeconfig() {
+        return kubeconfig;
     }
 
     @Override
-    public String getAksName() {
-        return this.aksName;
+    public String getHelmReleaseName() {
+        return helmReleaseName;
     }
 
-    public String getKubeConfig() {
-        return kubeConfig;
+    @Override
+    public String getHelmTillerNamespace() {
+        return helmTillerNamespace;
+    }
+
+    @Override
+    public int getHelmTimeout() {
+        return helmTimeout;
     }
 }
