@@ -8,10 +8,11 @@
         <version>3.4</version>
         <relativePath/>
     </parent>
-    <groupId>io.jenkins.plugins</groupId>
+
     <artifactId>azure-dev-spaces</artifactId>
     <version>2.1.0-SNAPSHOT</version>
     <packaging>hpi</packaging>
+
     <properties>
         <jenkins.version>2.7.3</jenkins.version>
         <java.level>8</java.level>
@@ -19,6 +20,7 @@
         <azure-commons.version>1.0.3</azure-commons.version>
         <jackson.version>2.9.9</jackson.version>
     </properties>
+
     <name>Azure Dev Spaces plugin</name>
     <description>Jenkins Azure Dev Spaces plugin</description>
     <licenses>
@@ -27,14 +29,12 @@
             <url>https://opensource.org/licenses/MIT</url>
         </license>
     </licenses>
-    <!-- Assuming you want to host on @jenkinsci:
-    <url>https://wiki.jenkins.io/display/JENKINS/TODO+Plugin</url>
+    <url>https://wiki.jenkins.io/display/JENKINS/Azure+Dev+Spaces+Plugin</url>
     <scm>
         <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
     </scm>
-    -->
 
     <developers>
         <developer>
@@ -192,7 +192,6 @@
                 <artifactId>credentials-binding</artifactId>
                 <version>1.16</version>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
 
