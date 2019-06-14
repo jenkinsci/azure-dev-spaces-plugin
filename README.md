@@ -50,13 +50,13 @@ Azure Dev Spaces plugin requires an Azure service principal to access Azure reso
 
 5. In the **Kubeconfig** list, select the kubeconfig stored in Jenkins. Select the **Add** button to add new kubeconfig. Select **Kubernetes configuration (kubeconfig)** from the **Kind** list.
 
-To get the AKS credentials, use `az aks get-credentials -g <resourcegroup> - <aksclustername> -f -`. The output will look somethign like this (truncated for  brevity):
+To get the AKS credentials, use `az aks get-credentials -g <resourcegroup> - <aksclustername> -f -`. The output will look similar to this (truncated for  brevity, sensitive info redacted):
 
 ```bash
 apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority-data: LS0tLS1C <...snip...> JRklDQVRFLS0tLS0K
+    certificate-authority-data: LS0tLS1C...JRklDQVRFLS0tLS0K
     server: https://jdsaks-jenkinsdevspace-xxxxxxx-xxxxxxxxx.hcp.westus2.azmk8s.io:443
   name: jdsAKS
 contexts:
@@ -70,8 +70,8 @@ preferences: {}
 users:
 - name: clusterUser_jenkinsdevspace_jdsAKS
   user:
-    client-certificate-data: LS0tLS1CRU <...snip...> FURS0tLS0tCg==
-    client-key-data: LS0tLS1CR <...snip...> LS0tLS0K
+    client-certificate-data: LS0tLS1CRU...FURS0tLS0tCg==
+    client-key-data: LS0tLS1CR...LS0tLS0K
     token: 9c8971bfxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
@@ -80,46 +80,57 @@ Copy the entire output and then paste it into the **Content** box.
 
 ### Pipeline
 
-The pipeline command is as follows to create a dev space is:
+The pipeline command to create a dev space is:
 
 ```Groovy
 devSpacesCreate aksName: '', azureCredentialsId: '', resourceGroupName: '', sharedSpaceName: '', spaceName: ''
 ```
 Example:
 ```Groovy
-    stage('create dev space') {
-        devSpacesCreate 
-            aksName: <aks cluster name>, 
-            azureCredentialsId: <ID of service principal credential>, 
-            kubeconfigId: <ID of kubeconfig credential, 
-            resourceGroupName: <aks resource group>, 
-            sharedSpaceName: <parent dev space name>, 
-            spaceName: <aks namespace>
-    }
+stage('create dev space') {
+    devSpacesCreate 
+        aksName: <aks cluster name>, 
+        azureCredentialsId: <ID of service principal credential>, 
+        kubeconfigId: <ID of kubeconfig credential>, 
+        resourceGroupName: <aks resource group>, 
+        sharedSpaceName: <parent dev space name>, 
+        spaceName: <aks namespace>
+}
 ```
 
 ## Clean up a dev space
 
 ### Freestyle job
 
-1. Choose to add a `Post-build Actions` action 'Cleanup dev spaces'.
+1. In the job configuration screen, scroll down to **Post-build Actions**. Add a post-build action **Cleanup dev spaces**.
 
-1. Select your Azure credential in Azure credential section.
+2. Select an Azure credential, resource group, and AKS cluster. 
 
-1. Select the resource group and Azure kubernetes service in your subscription.
+3. In **Dev Space Name **, enter the name of the dev space to clean uup.
 
-1. Set value for dev space name needed to be cleaned up.
+4. Select or add a **Kubeconfig**. See step 5, above, for details.
 
-1. In the "Kubeconfig" dropdown, select the kubeconfig stored in Jenkins. You can click the "Add" button on the right to add new kubeconfig (Kind: Kubernetes configuration (kubeconfig)). You can enter the kubeconfig content directly in it.
-
-1. Save the project and build it.
+1. Save the project and then build it.
 
 ### Pipeline
 
-Pipeline step command is like below, follow freestyle job to fill variables.
+The pipeline command to clean up (delete) a dev space is:
 
-```
+```Groovy
 devSpacesCleanup aksName: '', azureCredentialsId: '', devSpaceName: '', resourceGroupName: ''
+```
+
+Example:
+```Groovy
+stage('cleanup') {
+    devSpacesCleanup 
+        aksName: <aks cluster name>, 
+        azureCredentialsId: <ID of service principal credential>, 
+        devSpaceName: <name of dev space to delete>, 
+        kubeConfigId: <ID of kubeconfig credential>, 
+        resourceGroupName: <aks resource group>,
+        helmReleaseName: releaseName 
+}
 ```
 
 # Contributing
