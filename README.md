@@ -83,7 +83,7 @@ Azure Dev Spaces plugin requires an Azure service principal to access Azure reso
 The pipeline command to create a dev space is:
 
 ```Groovy
-devSpacesCreate aksName: '', azureCredentialsId: '', resourceGroupName: '', sharedSpaceName: '', spaceName: ''
+devSpacesCreate aksName: '', azureCredentialsId: '', resourceGroupName: '', sharedSpaceName: '', spaceName: '', kubeconfigId: ''
 ```
 Example:
 ```Groovy
@@ -119,6 +119,7 @@ The pipeline command to clean up (delete) a dev space is:
 ```Groovy
 devSpacesCleanup aksName: '', azureCredentialsId: '', devSpaceName: '', resourceGroupName: '', kubeConfigID: '',  helmReleaseName: ''
 ```
+
 `helmReleaseName` is optional. It is needed only if you deployed to the dev space using Helm.
 
 Example:
@@ -133,6 +134,7 @@ stage('cleanup') {
         helmReleaseName: <release name> 
 }
 ```
+
 
 # Contributing
 
