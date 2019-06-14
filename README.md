@@ -50,32 +50,32 @@ Azure Dev Spaces plugin requires an Azure service principal to access Azure reso
 
 5. <a name="step5"></a> In the **Kubeconfig** list, select the kubeconfig stored in Jenkins. Select the **Add** button to add new kubeconfig. Select **Kubernetes configuration (kubeconfig)** from the **Kind** list.
 
-To get the AKS credentials, use `az aks get-credentials -g <resourcegroup> - <aksclustername> -f -`. The output will look similar to this (truncated for  brevity, sensitive info redacted):
+    To get the AKS credentials, use `az aks get-credentials -g <resourcegroup> - <aksclustername> -f -`. The output will look similar to this (truncated for  brevity, sensitive info redacted):
 
-```bash
-apiVersion: v1
-clusters:
-- cluster:
-    certificate-authority-data: LS0tLS1C...JRklDQVRFLS0tLS0K
-    server: https://jdsaks-jenkinsdevspace-xxxxxxx-xxxxxxxxx.hcp.westus2.azmk8s.io:443
-  name: jdsAKS
-contexts:
-- context:
-    cluster: jdsAKS
-    user: clusterUser_jenkinsdevspace_jdsAKS
-  name: jdsAKS
-current-context: jdsAKS
-kind: Config
-preferences: {}
-users:
-- name: clusterUser_jenkinsdevspace_jdsAKS
-  user:
-    client-certificate-data: LS0tLS1CRU...FURS0tLS0tCg==
-    client-key-data: LS0tLS1CR...LS0tLS0K
-    token: 9c8971bfxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
+    ```bash
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: LS0tLS1C...JRklDQVRFLS0tLS0K
+        server: https://jdsaks-jenkinsdevspace-xxxxxxx-xxxxxxxxx.hcp.westus2.azmk8s.io:443
+    name: jdsAKS
+    contexts:
+    - context:
+        cluster: jdsAKS
+        user: clusterUser_jenkinsdevspace_jdsAKS
+    name: jdsAKS
+    current-context: jdsAKS
+    kind: Config
+    preferences: {}
+    users:
+    - name: clusterUser_jenkinsdevspace_jdsAKS
+    user:
+        client-certificate-data: LS0tLS1CRU...FURS0tLS0tCg==
+        client-key-data: LS0tLS1CR...LS0tLS0K
+        token: 9c8971bfxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    ```
 
-Copy the entire output and then paste it into the **Content** box.
+    Copy the entire output and then paste it into the **Content** box.
 
 
 ### Pipeline
@@ -106,7 +106,7 @@ stage('create dev space') {
 
 2. Select an Azure credential, resource group, and AKS cluster. 
 
-3. In **Dev Space Name **, enter the name of the dev space to clean uup.
+3. In **Dev Space Name**, enter the name of the dev space to clean uup.
 
 4. Select or add a **Kubeconfig**. See [step 5](#step5), above, for details.
 
