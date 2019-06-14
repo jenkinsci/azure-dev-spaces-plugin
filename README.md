@@ -48,7 +48,7 @@ Azure Dev Spaces plugin requires an Azure service principal to access Azure reso
 
 4. Set value for your parent dev space name and dev space name.
 
-5. In the **Kubeconfig** list, select the kubeconfig stored in Jenkins. Select the **Add** button to add new kubeconfig. Select **Kubernetes configuration (kubeconfig)** from the **Kind** list.
+5. <a name="step5"></a> In the **Kubeconfig** list, select the kubeconfig stored in Jenkins. Select the **Add** button to add new kubeconfig. Select **Kubernetes configuration (kubeconfig)** from the **Kind** list.
 
 To get the AKS credentials, use `az aks get-credentials -g <resourcegroup> - <aksclustername> -f -`. The output will look similar to this (truncated for  brevity, sensitive info redacted):
 
@@ -108,7 +108,7 @@ stage('create dev space') {
 
 3. In **Dev Space Name **, enter the name of the dev space to clean uup.
 
-4. Select or add a **Kubeconfig**. See step 5, above, for details.
+4. Select or add a **Kubeconfig**. See [step 5](#step5), above, for details.
 
 1. Save the project and then build it.
 
