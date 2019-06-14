@@ -51,7 +51,7 @@ To use this plugin to manage dev spaces, first you need to have an Azure Service
 Pipeline step command is like below, follow freestyle job to fill variables.
 
 ```
-devSpacesCreate aksName: '', azureCredentialsId: '', resourceGroupName: '', sharedSpaceName: '', spaceName: ''
+devSpacesCreate aksName: '', azureCredentialsId: '', resourceGroupName: '', sharedSpaceName: '', spaceName: '', kubeconfigId: ''
 ```
 
 ## Clean up a dev space
@@ -75,8 +75,10 @@ devSpacesCreate aksName: '', azureCredentialsId: '', resourceGroupName: '', shar
 Pipeline step command is like below, follow freestyle job to fill variables.
 
 ```
-devSpacesCleanup aksName: '', azureCredentialsId: '', devSpaceName: '', resourceGroupName: ''
+devSpacesCleanup aksName: '', azureCredentialsId: '', devSpaceName: '', resourceGroupName: '', kubeConfigId: '', helmReleaseName: '',
 ```
+
+> The helmReleaseName parameter is optional. You should provide it if you use helm to deploy to AKS and it will clean up the helm release too.
 
 # Contributing
 
