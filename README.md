@@ -1,95 +1,146 @@
 # Azure Dev Spaces Plugin
 
-Azure Dev Spaces Plugin helps to manage dev spaces in [Azure Dev Spaces](https://docs.microsoft.com/en-us/azure/dev-spaces/).
+Azure Dev Spaces Plugin helps to manage [Azure Dev Spaces](https://docs.microsoft.com/en-us/azure/dev-spaces/) in a Jenkins pipeline.
 
-## How to Install 
+## Installation 
 
-You can install/update this plugin in Jenkins update center (Manage Jenkins -> Manage Plugins, search Azure Dev Spaces Plugin).
+You can install/update this plugin in Jenkins Plugin Manager. 
+1. Sign into Jenkins
+1. Choose **Manage Jenkins > Manage Plugins > Available tab**
+1. Filter for the `Azure Dev Spaces Plugin`
+1. Choose **Download now and install after restart**
+1. Restart Jenkins
 
-You can also manually install the plugin if you want to try the latest feature before it's officially released.
+If you don't see the plugin in the list, check to see if it is already installed.
+
+You can also can manually build and install the plugin. Manual builds are helpful if you want to try out the latest features before they are released.
+
 To manually install the plugin:
 
-1. Clone the repo and build:
-   ```
-   mvn package
-   ```
-   
-1. Open your Jenkins dashboard, go to Manage Jenkins -> Manage Plugins.
+1. Clone the repo and build
 
-1. Go to Advanced tab, under Upload Plugin section, click Choose File.
+    ```bash
+    mvn package
+    ```
 
-1. Select `azure-dev-spaces.hpi` in `target` folder of your repo, click Upload.
+2. Sign into Jenkins, then go to **Manage Jenkins > Manage Plugins**.
 
-1. Restart your Jenkins instance after install is completed.
+3. On the **Advanced** tab, under **Upload Plugin** section, select **Choose File**.
 
-## Prerequisites
+4. Select `azure-dev-spaces.hpi` in `target` folder of your repo, and then choose **Upload**.
 
-To use this plugin to manage dev spaces, first you need to have an Azure Service Principal in your Jenkins instance.
+5. Restart Jenkins after installation is completed.
 
-1. Create an Azure Service Principal through [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli?toc=%2fazure%2fazure-resource-manager%2ftoc.json) or [Azure portal](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-create-service-principal-portal).
+## Prerequisites for use
 
-1. Open Jenkins dashboard, go to Credentials, add a new Microsoft Azure Service Principal with the credential information you just created.
+Azure Dev Spaces plugin requires an Azure service principal to access Azure resources. To create the service principal and add a new credential to Jenkins, refer to the [Create service principal](https://docs.microsoft.com/en-us/azure/jenkins/tutorial-jenkins-deploy-web-app-azure-app-service#create-service-principal) section in the Deploy to Azure App Service tutorial. 
+
 
 ## Create a dev space
 
 ### Freestyle job
 
-1. Choose to add a `Build` action 'Create dev spaces'.
+1. Create a new freestyle job, or open an existing job.
 
-1. Select your Azure credential in Azure credential section.
+2. On the **Build** tab, in the **Build** section, choose **Add build step**. Fron the list, choose **Create dev spaces**.
 
-1. Select the resource group and Azure kubernetes service in your subscription.
+3. Select your Azure credential, resource group, and AKS cluster from the lists. 
 
-1. Set value for your parent dev space name and dev space name.
+4. Set value for your parent dev space name and dev space name.
 
-1. Select kubernetes configuration, this is 
+5. <a name="step5"></a> In the **Kubeconfig** list, select the kubeconfig stored in Jenkins. Select the **Add** button to add new kubeconfig. Select **Kubernetes configuration (kubeconfig)** from the **Kind** list.
 
-1. In the "Kubeconfig" dropdown, select the kubeconfig stored in Jenkins. You can click the "Add" button on the right to add new kubeconfig (Kind: Kubernetes configuration (kubeconfig)). You can enter the kubeconfig content directly in it.
+    To get the AKS credentials, use `az aks get-credentials -g <resourcegroup> - <aksclustername> -f -`. The output will look similar to this (truncated for  brevity, sensitive info redacted):
+
+    ```bash
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: LS0tLS1C...JRklDQVRFLS0tLS0K
+        server: https://jdsaks-jenkinsdevspace-xxxxxxx-xxxxxxxxx.hcp.westus2.azmk8s.io:443
+    name: jdsAKS
+    contexts:
+    - context:
+        cluster: jdsAKS
+        user: clusterUser_jenkinsdevspace_jdsAKS
+    name: jdsAKS
+    current-context: jdsAKS
+    kind: Config
+    preferences: {}
+    users:
+    - name: clusterUser_jenkinsdevspace_jdsAKS
+    user:
+        client-certificate-data: LS0tLS1CRU...FURS0tLS0tCg==
+        client-key-data: LS0tLS1CR...LS0tLS0K
+        token: 9c8971bfxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    ```
+
+    Copy the entire output and then paste it into the **Content** box.
+
 
 ### Pipeline
 
-Pipeline step command is like below, follow freestyle job to fill variables.
+The pipeline command to create a dev space is:
 
-```
+```Groovy
 devSpacesCreate aksName: '', azureCredentialsId: '', resourceGroupName: '', sharedSpaceName: '', spaceName: '', kubeconfigId: ''
+```
+Example:
+```Groovy
+stage('create dev space') {
+    devSpacesCreate 
+        aksName: <aks cluster name>, 
+        azureCredentialsId: <ID of service principal credential>, 
+        kubeconfigId: <ID of kubeconfig credential>, 
+        resourceGroupName: <aks resource group>, 
+        sharedSpaceName: <parent dev space name>, 
+        spaceName: <aks namespace>
+}
 ```
 
 ## Clean up a dev space
 
 ### Freestyle job
 
-1. Choose to add a `Post-build Actions` action 'Cleanup dev spaces'.
+1. In the job configuration screen, scroll down to **Post-build Actions**. Add a post-build action **Cleanup dev spaces**.
 
-1. Select your Azure credential in Azure credential section.
+2. Select an Azure credential, resource group, and AKS cluster. 
 
-1. Select the resource group and Azure kubernetes service in your subscription.
+3. In **Dev Space Name**, enter the name of the dev space to clean uup.
 
-1. Set value for dev space name needed to be cleaned up.
+4. Select or add a **Kubeconfig**. See [step 5](#step5), above, for details.
 
-1. In the "Kubeconfig" dropdown, select the kubeconfig stored in Jenkins. You can click the "Add" button on the right to add new kubeconfig (Kind: Kubernetes configuration (kubeconfig)). You can enter the kubeconfig content directly in it.
-
-1. Save the project and build it.
+1. Save the project and then build it.
 
 ### Pipeline
 
-Pipeline step command is like below, follow freestyle job to fill variables.
+The pipeline command to clean up (delete) a dev space is:
 
-```
-devSpacesCleanup aksName: '', azureCredentialsId: '', devSpaceName: '', resourceGroupName: '', kubeConfigId: '', helmReleaseName: '',
+```Groovy
+devSpacesCleanup aksName: '', azureCredentialsId: '', devSpaceName: '', resourceGroupName: '', kubeConfigID: '',  helmReleaseName: ''
 ```
 
-> The helmReleaseName parameter is optional. You should provide it if you use helm to deploy to AKS and it will clean up the helm release too.
+`helmReleaseName` is optional. It is needed only if you deployed to the dev space using Helm.
+
+Example:
+```Groovy
+stage('cleanup') {
+    devSpacesCleanup 
+        aksName: <aks cluster name>, 
+        azureCredentialsId: <ID of service principal credential>, 
+        devSpaceName: <name of dev space to delete>, 
+        kubeConfigId: <ID of kubeconfig credential>, 
+        resourceGroupName: <aks resource group>,
+        helmReleaseName: <release name> 
+}
+```
+
 
 # Contributing
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.microsoft.com.
+This project welcomes contributions and suggestions.  Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us the rights to use your contribution. For details, visit https://cla.microsoft.com.
 
-When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+When you submit a pull request, a CLA-bot will automatically determine whether you need to provide a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions provided by the bot. You will only need to do this once across all repos using our CLA.
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
