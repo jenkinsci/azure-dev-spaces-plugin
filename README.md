@@ -117,8 +117,9 @@ stage('create dev space') {
 The pipeline command to clean up (delete) a dev space is:
 
 ```Groovy
-devSpacesCleanup aksName: '', azureCredentialsId: '', devSpaceName: '', resourceGroupName: ''
+devSpacesCleanup aksName: '', azureCredentialsId: '', devSpaceName: '', resourceGroupName: '', kubeConfigID: '',  helmReleaseName: ''
 ```
+`helmReleaseName` is optional. It is needed only if you deployed to the dev space using Helm.
 
 Example:
 ```Groovy
@@ -129,7 +130,7 @@ stage('cleanup') {
         devSpaceName: <name of dev space to delete>, 
         kubeConfigId: <ID of kubeconfig credential>, 
         resourceGroupName: <aks resource group>,
-        helmReleaseName: releaseName 
+        helmReleaseName: <release name> 
 }
 ```
 
