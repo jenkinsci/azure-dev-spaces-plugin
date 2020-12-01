@@ -1,5 +1,8 @@
 # Azure Dev Spaces Plugin Changelog
 
+## version 3.0.3 2020-12-01
+* Move document to GitHub
+
 ## version 3.0.2 2020-11-25
 * Update document
 
