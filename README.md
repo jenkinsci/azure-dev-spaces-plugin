@@ -2,8 +2,8 @@
 
 Azure Dev Spaces Plugin helps to manage [Azure Dev Spaces](https://docs.microsoft.com/en-us/azure/dev-spaces/) in a Jenkins pipeline.
 
-| :warning:Important: this plugin is retired. Azure Dev Spaces is being retired and will stop working on October 31, 2023. |
-| --------------------------------------------------------------------------------------------------------------- |
+> **NOTE:**   
+> **Important**: this plugin is retired. Azure Dev Spaces is being retired and will stop working on October 31, 2023.
 
 ## Installation 
 
