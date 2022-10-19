@@ -17,7 +17,7 @@
         <java.level>8</java.level>
         <azure-credentials.version>1.6.0</azure-credentials.version>
         <azure-commons.version>1.0.4</azure-commons.version>
-        <jackson.version>2.12.1</jackson.version>
+        <jackson.version>2.13.4.1</jackson.version>
     </properties>
 
     <name>Azure Dev Spaces plugin</name>
